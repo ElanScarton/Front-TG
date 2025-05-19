@@ -4,9 +4,8 @@ import { Tally3 } from 'lucide-react';
 import  axios from "axios"
 import BookCard from "./BookCard";
 
-const MainContent = () =>{
-    const{searchQuery, selectedCategory, minPrice, maxPrice, keyword} = 
-        useFilter()
+const MainContent = ({ isExpanded }) =>{
+    const{searchQuery, selectedCategory, minPrice, maxPrice, keyword} = useFilter()
 
     const [products, setProducts] = useState<any[]>([]);
     const [filter, setFilter] = useState('all');
@@ -100,7 +99,16 @@ const MainContent = () =>{
         return buttons;
     }
 
-    return( 
+    // Calculate left margin or padding based on sidebar state
+    const sidebarWidth = isExpanded ? "w-64" : "w-16";
+
+    return(
+        <div 
+            className={`transition-all duration-300 ml-${isExpanded ? '64' : '16'}`}
+            style={{ 
+                marginLeft: isExpanded ? '16rem' : '4rem'  // 16rem (64) when expanded, 4rem (16) when collapsed
+            }}
+        >
     <section className="xl:w-[55rem] lg:w-[55rem] sm:w-[40rem] xs:w-[20rem] p-5">
         <div className="mb-5">
         <div className="flex flex-col sm:flex-row justify-between items-center">
@@ -146,38 +154,45 @@ const MainContent = () =>{
             ))}
         </div>
 
-         <div className="flex flex-col sm:flex-row justify-between items-center mt-5">
-            {/* previous */}
-            <button 
-                onClick={()=> handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1} 
-                className="border px-4 py-2 mx-2 rounded-full">
-                Previous
-            </button>
-
-            {/* previous estilisando o botão de paginas*/}
-            <div className="flex flex-wrap justify-center">
-                {getPaginationButtons().map(page =>(
-                    <button
-                     key={page} 
-                     onClick={() => handlePageChange(page)} 
-                     className={`border px-4 py-2 mx-1 rounded-full ${
-                        page === currentPage ? 'bg-black text-white' : ""
-                        }`}>
-                            {page}
-                        </button>
-                ))}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-8">
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              
+              {getPaginationButtons().map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded-md ${
+                    page === currentPage 
+                      ? 'bg-black text-white' 
+                      : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50"
+              >
+                Próximo
+              </button>
             </div>
-            {/* next */}
-            <button
-             onClick= {() => handlePageChange(currentPage + 1)} 
-             disabled={currentPage === totalPages}
-             className="border px-4 py-2 mx-2 rounded-full">
-                Next
-            </button>
-         </div>
+          </div>
+        )}
         </div>
     </section>
+    </div>
 );
 }
 export default MainContent
