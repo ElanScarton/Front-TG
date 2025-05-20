@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useFilter } from "./FilterContext";
+import { useFilter } from "../contexts/FilterContext";
 
 interface Product {
     category: string;

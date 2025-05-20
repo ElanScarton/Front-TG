@@ -1,99 +1,116 @@
-// Atualize o arquivo App.tsx para incluir a nova rota
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
-import ProductPage from "./components/ProductPage";
+import ProductPage from "./pages/consumidor/ProductPage";
 import SidebarNav from "./components/SidebarNav";
-import Login from "./components/Login";
-import Register from "./components/Register";
-import WelcomePage from "./components/WelcomePage";
-import AuctionCreationPage from "./components/AuctionCreationPage"; // Importe o novo componente
-import ProtectedRoute from "./components/ProtectedRoute";
-import { AuthProvider } from "./contexts/AuthContext";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import WelcomePage from "./pages/WelcomePage";
+import AuctionCreationPage from "./pages/consumidor/AuctionCreationPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import { UserType } from "./contexts/AuthContext";
 import { useState } from "react";
-import AuctionListPage from "./components/AuctionListPage";
-import AuctionBidPage from "./components/AuctionBidPage";
+import AuctionListPage from "./pages/consumidor/AuctionListPage";
+import AuctionBidPage from "./pages/fornecedor/AuctionBidPage";
 
 export default function App() {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const handleSidebarToggle = (expanded) => {
+  const handleSidebarToggle = (expanded: boolean) => {
     setIsExpanded(expanded);
   };
 
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Página de boas-vindas pública como rota inicial */}
-          <Route path="/" element={<WelcomePage />} />
-          
-          {/* Rotas públicas de autenticação */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Rotas protegidas da aplicação principal */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/products" element={
-              <div className="flex h-screen">
-                <Sidebar/>
-                <div className="rounded w-full flex justify-between flex-wrap">
-                  <MainContent isExpanded={isExpanded}/>
-                </div>
-                <div>
-                  <SidebarNav isExpanded={isExpanded} onToggle={handleSidebarToggle}/>
-                </div>
-              </div>
-            } />
-            
-            <Route path="/product/:id" element={
-              <div className="flex h-screen">
-                <div className="rounded w-full flex justify-between flex-wrap">
-                  <ProductPage />
-                </div>
-                <div>
-                  <SidebarNav isExpanded={isExpanded} onToggle={handleSidebarToggle}/>
-                </div>
-              </div>
-            } />
-            
-            {/* Nova rota para criar pregão */}
-            <Route path="/product/:id/create-auction" element={
-              <div className="flex h-screen">
-                <div className="rounded w-full flex justify-between flex-wrap">
-                  <AuctionCreationPage />
-                </div>
-                <div>
-                  <SidebarNav isExpanded={isExpanded} onToggle={handleSidebarToggle}/>
-                </div>
-              </div>
-            } />
-          
+    <Routes>
+      {/* Página de boas-vindas pública como rota inicial */}
+      <Route path="/" element={<WelcomePage />} />
 
-            <Route path="/list" element={
-              <div className="flex h-screen">
-                <div className="rounded w-full flex justify-between flex-wrap">
-                  <AuctionListPage />
-                </div>
-                <div>
-                  <SidebarNav isExpanded={isExpanded} onToggle={handleSidebarToggle}/>
-                </div>
-              </div>
-            } />
+      {/* Rotas públicas de autenticação */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
-            <Route path="/auctions/:id/bid" element={
-              <div className="flex h-screen">
-                <div className="rounded w-full flex justify-between flex-wrap">
-                  <AuctionBidPage />
-                </div>
-                <div>
-                  <SidebarNav isExpanded={isExpanded} onToggle={handleSidebarToggle}/>
-                </div>
+      {/* Rotas para Consumidores */}
+      <Route element={<ProtectedRoute allowedTypes={[UserType.Consumidor, UserType.Administrador]} />}>
+        <Route
+          path="/products"
+          element={
+            <div className="flex h-screen">
+              <Sidebar />
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <MainContent isExpanded={isExpanded} />
               </div>
-            } />
-          </Route>
-        </Routes>
-      </Router>
-    </AuthProvider>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+
+        <Route
+          path="/product/:id"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <ProductPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+      </Route>
+
+      {/* Rotas para Administradores */}
+      <Route element={<ProtectedRoute allowedTypes={[UserType.Administrador]} />}>
+        <Route
+          path="/product/:id/create-auction"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <AuctionCreationPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+      </Route>
+
+      {/* Rotas para Fornecedores */}
+      <Route element={<ProtectedRoute allowedTypes={[UserType.Fornecedor, UserType.Administrador]} />}>
+        <Route
+          path="/list"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <AuctionListPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+      </Route>
+
+      {/* Rotas acessíveis a Fornecedores e Administradores */}
+      <Route element={<ProtectedRoute allowedTypes={[UserType.Fornecedor, UserType.Administrador]} />}>
+        <Route
+          path="/auctions/:id/bid"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <AuctionBidPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+      </Route>
+    </Routes>
   );
 }

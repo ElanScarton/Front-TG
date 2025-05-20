@@ -1,11 +1,9 @@
-// src/services/api.ts
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 
-// Configuração para alternar entre mock e API real
-const USE_MOCK = true; // Em produção, você pode usar: process.env.REACT_APP_USE_MOCK === 'true'
-const API_URL = 'https://sua-api.com'; // Substitua pela URL real da sua API
+// Configuração da API
+const API_URL = 'http://localhost:5102/api';
 
-// Configuração do cliente axios para chamadas reais à API
+// Configuração do cliente axios para chamadas à API
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -13,10 +11,32 @@ const api = axios.create({
   },
 });
 
+// Função que será usada para obter o token atual
+// Inicialmente definida para obter do localStorage, mas pode ser sobrescrita
+let tokenProvider = () => localStorage.getItem('token');
+
+// Função que será chamada em caso de erro de autenticação
+let handleAuthError = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+};
+
+// Permite que o AuthContext sobrescreva como obtemos o token
+export const setTokenProvider = (provider: () => string | null) => {
+  tokenProvider = provider;
+};
+
+// Permite que o AuthContext sobrescreva como lidamos com erros de autenticação
+export const setAuthErrorHandler = (handler: () => void) => {
+  handleAuthError = handler;
+};
+
 // Interceptor para adicionar token de autenticação
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
+  const token = tokenProvider();
   if (token) {
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -28,95 +48,52 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Token expirado ou inválido
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      handleAuthError();
     }
     return Promise.reject(error);
   }
 );
 
-// Serviço de autenticação com toggle entre mock e real
-export const authService = {
-  login: async (email: string, password: string) => {
-    if (USE_MOCK) {
-      // Simula um delay de rede
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock de autenticação para desenvolvimento
-      if (email === "test@example.com" && password === "password") {
-        const mockResponse = {
-          token: "mock-jwt-token-xyz",
-          user: { id: "1", name: "Usuário Teste", email }
-        };
-        
-        // Armazenar dados no localStorage, como faria a implementação real
-        localStorage.setItem('authToken', mockResponse.token);
-        localStorage.setItem('user', JSON.stringify(mockResponse.user));
-        
-        return mockResponse;
-      }
-      throw new Error("Credenciais inválidas");
-    } else {
-      // Implementação real que se conecta ao back-end
-      const response = await api.post('/auth/login', { email, password });
-      
-      // Armazenar token e dados do usuário
-      localStorage.setItem('authToken', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      return response.data;
-    }
+// Serviços específicos para recursos da aplicação
+export const productService = {
+  getAll: async () => {
+    const response = await api.get('/products');
+    return response.data;
   },
   
-  register: async (userData: any) => {
-    if (USE_MOCK) {
-      // Simula um delay de rede
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Validação básica
-      if (!userData.email || !userData.password || !userData.name) {
-        throw new Error("Dados de registro incompletos");
-      }
-      
-      // Simulação de email já existente
-      if (userData.email === "existente@example.com") {
-        throw new Error("Email já cadastrado");
-      }
-      
-      // Retorna sucesso
-      return { success: true, message: "Usuário registrado com sucesso" };
-    } else {
-      // Implementação real
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    }
+  getById: async (id: string) => {
+    const response = await api.get(`/products/${id}`);
+    return response.data;
   },
   
-  logout: () => {
-    // A lógica de logout é a mesma para mock e real:
-    // Remove o token e dados do usuário do localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    
-    if (!USE_MOCK) {
-      // Se desejar, pode fazer uma chamada à API para invalidar o token no servidor
-      // api.post('/auth/logout');
-    }
+  create: async (productData: any) => {
+    const response = await api.post('/products', productData);
+    return response.data;
   },
   
-  getCurrentUser: () => {
-    // Recupera dados do usuário do localStorage
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return null;
-    return JSON.parse(userStr);
+  update: async (id: string, productData: any) => {
+    const response = await api.put(`/products/${id}`, productData);
+    return response.data;
   },
   
-  isAuthenticated: () => {
-    // Verifica se há um token armazenado
-    return !!localStorage.getItem('authToken');
+  delete: async (id: string) => {
+    const response = await api.delete(`/products/${id}`);
+    return response.data;
   }
 };
 
-// Exporta o cliente axios para uso em outras partes da aplicação
+// Exemplo de serviço para usuários (exceto autenticação)
+export const userService = {
+  getProfile: async () => {
+    const response = await api.get('/usuarios/profile');
+    return response.data;
+  },
+  
+  updateProfile: async (userData: any) => {
+    const response = await api.put('/usuarios/profile', userData);
+    return response.data;
+  }
+};
+
+// Exporta o cliente axios como padrão
 export default api;
