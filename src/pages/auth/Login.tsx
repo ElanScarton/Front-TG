@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, UserType } from '../../contexts/AuthContext';
 
@@ -64,11 +64,11 @@ const Login = () => {
         // Redirecionar com base no tipo de usuário
         const userType = getUserType(); // Usar a função extraída anteriormente
         
-        if (userType === UserType.Fornecedor) {
+        if (userType === UserType.FORNECEDOR) {
           navigate('/list');
-        } else if (userType === UserType.Consumidor) {
+        } else if (userType === UserType.CONSUMIDOR) {
           navigate('/products');
-        } else if (userType === UserType.Administrador) {
+        } else if (userType === UserType.ADMINISTRADOR) {
           navigate('/products'); // Ou qualquer outra rota admin
         } else {
           navigate('/products'); // Fallback
@@ -128,7 +128,7 @@ const Login = () => {
               </label>
               <input
                 id="senha"
-                name="senha" // Alterado de "password" para "senha"
+                name="senha"
                 type="password"
                 autoComplete="current-password"
                 required

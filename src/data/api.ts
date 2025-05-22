@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 
 // Configuração da API
 const API_URL = 'http://localhost:5102/api';
@@ -53,47 +53,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Serviços específicos para recursos da aplicação
-export const productService = {
-  getAll: async () => {
-    const response = await api.get('/products');
-    return response.data;
-  },
-  
-  getById: async (id: string) => {
-    const response = await api.get(`/products/${id}`);
-    return response.data;
-  },
-  
-  create: async (productData: any) => {
-    const response = await api.post('/products', productData);
-    return response.data;
-  },
-  
-  update: async (id: string, productData: any) => {
-    const response = await api.put(`/products/${id}`, productData);
-    return response.data;
-  },
-  
-  delete: async (id: string) => {
-    const response = await api.delete(`/products/${id}`);
-    return response.data;
-  }
-};
-
-// Exemplo de serviço para usuários (exceto autenticação)
-export const userService = {
-  getProfile: async () => {
-    const response = await api.get('/usuarios/profile');
-    return response.data;
-  },
-  
-  updateProfile: async (userData: any) => {
-    const response = await api.put('/usuarios/profile', userData);
-    return response.data;
-  }
-};
 
 // Exporta o cliente axios como padrão
 export default api;

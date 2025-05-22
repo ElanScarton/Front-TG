@@ -12,6 +12,7 @@ import { UserType } from "./contexts/AuthContext";
 import { useState } from "react";
 import AuctionListPage from "./pages/consumidor/AuctionListPage";
 import AuctionBidPage from "./pages/fornecedor/AuctionBidPage";
+import Profile from "./pages/profile";
 
 export default function App() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -30,7 +31,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
 
       {/* Rotas para Consumidores */}
-      <Route element={<ProtectedRoute allowedTypes={[UserType.Consumidor, UserType.Administrador]} />}>
+      <Route element={<ProtectedRoute allowedTypes={[UserType.CONSUMIDOR, UserType.ADMINISTRADOR]} />}>
         <Route
           path="/products"
           element={
@@ -59,10 +60,24 @@ export default function App() {
             </div>
           }
         />
+
+        <Route
+          path="/profile"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <Profile />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
       </Route>
 
       {/* Rotas para Administradores */}
-      <Route element={<ProtectedRoute allowedTypes={[UserType.Administrador]} />}>
+      <Route element={<ProtectedRoute allowedTypes={[UserType.ADMINISTRADOR]} />}>
         <Route
           path="/product/:id/create-auction"
           element={
@@ -76,10 +91,23 @@ export default function App() {
             </div>
           }
         />
+        <Route
+          path="/profile"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <Profile />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
       </Route>
 
       {/* Rotas para Fornecedores */}
-      <Route element={<ProtectedRoute allowedTypes={[UserType.Fornecedor, UserType.Administrador]} />}>
+      <Route element={<ProtectedRoute allowedTypes={[UserType.FORNECEDOR, UserType.ADMINISTRADOR]} />}>
         <Route
           path="/list"
           element={
@@ -93,16 +121,42 @@ export default function App() {
             </div>
           }
         />
+        <Route
+          path="/profile"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <Profile />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
       </Route>
 
       {/* Rotas acessíveis a Fornecedores e Administradores */}
-      <Route element={<ProtectedRoute allowedTypes={[UserType.Fornecedor, UserType.Administrador]} />}>
+      <Route element={<ProtectedRoute allowedTypes={[UserType.FORNECEDOR, UserType.ADMINISTRADOR]} />}>
         <Route
           path="/auctions/:id/bid"
           element={
             <div className="flex h-screen">
               <div className="rounded w-full flex justify-between flex-wrap">
                 <AuctionBidPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <Profile />
               </div>
               <div>
                 <SidebarNav onToggle={handleSidebarToggle} />

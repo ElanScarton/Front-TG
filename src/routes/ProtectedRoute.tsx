@@ -19,17 +19,14 @@ const ProtectedRoute = ({ allowedTypes }: ProtectedRouteProps) => {
     const userType = getUserType();
     if (!userType || !allowedTypes.includes(userType)) {
       // Redirecionar para a página apropriada baseada no tipo de usuário
-      if (userType === UserType.Consumidor) {
+      if (userType === UserType.CONSUMIDOR) {
         return <Navigate to="/products" replace />;
-      } else if (userType === UserType.Fornecedor) {
+      } else if (userType === UserType.FORNECEDOR) {
         return <Navigate to="/list" replace />;
-      } else if (userType === UserType.Administrador) {
-        // Página padrão para administrador
-        return <Navigate to="/products" replace />;
       }
       
       // Fallback se algo der errado
-      return <Navigate to="/" replace />;
+      //return <Navigate to="/" replace />;
     }
   }
   
