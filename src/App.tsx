@@ -4,7 +4,7 @@ import MainContent from "./components/MainContent";
 import ProductPage from "./pages/consumidor/ProductPage";
 import SidebarNav from "./components/SidebarNav";
 import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
+import Register from "./pages/adm/Register";
 import WelcomePage from "./pages/WelcomePage";
 import AuctionCreationPage from "./pages/consumidor/AuctionCreationPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -12,7 +12,9 @@ import { UserType } from "./contexts/AuthContext";
 import { useState } from "react";
 import AuctionListPage from "./pages/consumidor/AuctionListPage";
 import AuctionBidPage from "./pages/fornecedor/AuctionBidPage";
-import Profile from "./pages/profile";
+import Profile from "./pages/Profile";
+import AuctionMonitorPage from "./pages/consumidor/AuctionMonitorPage";
+import ActiveAuctions from "./pages/consumidor/ActiveAuctionsPage";
 
 export default function App() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -28,7 +30,7 @@ export default function App() {
 
       {/* Rotas públicas de autenticação */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      
 
       {/* Rotas para Consumidores */}
       <Route element={<ProtectedRoute allowedTypes={[UserType.CONSUMIDOR, UserType.ADMINISTRADOR]} />}>
@@ -62,7 +64,7 @@ export default function App() {
         />
 
         <Route
-          path="/profile"
+          path="/settings"
           element={
             <div className="flex h-screen">
               <div className="rounded w-full flex justify-between flex-wrap">
@@ -74,7 +76,35 @@ export default function App() {
             </div>
           }
         />
-      </Route>
+
+      <Route
+          path="/activeauctions"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <ActiveAuctions />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+      />
+      
+      <Route
+          path="/auctionMonitorPage/:id"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <AuctionMonitorPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+        </Route>
 
       {/* Rotas para Administradores */}
       <Route element={<ProtectedRoute allowedTypes={[UserType.ADMINISTRADOR]} />}>
@@ -92,11 +122,24 @@ export default function App() {
           }
         />
         <Route
-          path="/profile"
+          path="/settings"
           element={
             <div className="flex h-screen">
               <div className="rounded w-full flex justify-between flex-wrap">
                 <Profile />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <Register />
               </div>
               <div>
                 <SidebarNav onToggle={handleSidebarToggle} />
@@ -122,7 +165,7 @@ export default function App() {
           }
         />
         <Route
-          path="/profile"
+          path="/settings"
           element={
             <div className="flex h-screen">
               <div className="rounded w-full flex justify-between flex-wrap">
@@ -152,7 +195,7 @@ export default function App() {
           }
         />
         <Route
-          path="/profile"
+          path="/settings"
           element={
             <div className="flex h-screen">
               <div className="rounded w-full flex justify-between flex-wrap">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, History, Home, Settings, ShoppingBag, HelpCircle, BookOpen, Handshake } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, Home, Settings, ShoppingBag, Users, BookOpen, Handshake } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
 const SidebarNav = ({ onToggle }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -40,12 +41,13 @@ const SidebarNav = ({ onToggle }) => {
 
   const navItems = [
     { icon: <Home size={20} />, label: "Início", id: "home", path: "/products" },
-    { icon: <ShoppingBag size={20} />, label: "Leilões Ativos", id: "active-auctions", path: "/active-auctions" },
+    { icon: <ShoppingBag size={20} />, label: "Leilões Ativos", id: "active-auctions", path: "/activeauctions" },
     { icon: <History size={20} />, label: "Histórico de Leilão", id: "auction-history", path: "/auction-history" },
     { icon: <BookOpen size={20} />, label: "Meus Lances", id: "my-bids", path: "/my-bids" },
     { icon: <Settings size={20} />, label: "Configurações", id: "settings", path: "/settings" },
-    { icon: <HelpCircle size={20} />, label: "Ajuda", id: "help", path: "/help" }
+    { icon: <Users size={20} />, label: "Adicionar", id: "register", path: "/register" }
   ];
+  
 
   return (
     <div 

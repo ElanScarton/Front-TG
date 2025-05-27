@@ -8,7 +8,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    nome: '',
+    name: '',
     email: '',
     cpf: '',
     cnpj: '',
@@ -27,7 +27,7 @@ const Profile = () => {
         const userData = response.data;
         
         const formattedData = {
-          nome: userData.nome || user?.nome || '',
+          nome: userData.nome || user?.name || '',
           email: userData.email || user?.email || '',
           cpf: userData.cpf || '',
           cnpj: userData.cnpj || '',
@@ -42,7 +42,7 @@ const Profile = () => {
         console.error('Erro ao carregar perfil:', error);
         // Se falhar, usar dados do contexto
         const fallbackData = {
-          nome: user?.nome || '',
+          name: user?.name || '',
           email: user?.email || '',
           cpf: '',
           cnpj: '',
@@ -80,10 +80,11 @@ const Profile = () => {
       }
 
       const updateData = {
-        nome: profileData.nome,
+        name: profileData.name,
         email: profileData.email,
         cpf: profileData.cpf,
-        cnpj: profileData.cnpj
+        cnpj: profileData.cnpj,
+        senha: profileData.senha
       };
 
       // Adicionar senha apenas se foi preenchida
@@ -124,7 +125,7 @@ const Profile = () => {
     }
   };
 
-  if (loading && !profileData.nome) {
+  if (loading && !profileData.name) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -206,14 +207,14 @@ const Profile = () => {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={profileData.nome}
+                    value={profileData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Digite seu nome completo"
                   />
                 ) : (
                   <p className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
-                    {profileData.nome || 'Não informado'}
+                    {profileData.name || 'Não informado'}
                   </p>
                 )}
               </div>

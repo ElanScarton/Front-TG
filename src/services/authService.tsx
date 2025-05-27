@@ -38,7 +38,7 @@ export const login = async (email: string, senha: string): Promise<{ token: stri
           // Verificar se é string descritiva
           if (typeof roleValue === 'string') {
             if (roleValue.toLowerCase().includes('fornecedor')) userType = UserType.FORNECEDOR;
-            else if (roleValue.toLowerCase().includes('administrador')) userType = UserType.ADIMINISTRADOR;
+            else if (roleValue.toLowerCase().includes('administrador')) userType = UserType.ADMINISTRADOR;
             else if (roleValue.toLowerCase().includes('consumidor')) userType = UserType.CONSUMIDOR;
           }
         }

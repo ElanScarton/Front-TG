@@ -7,10 +7,11 @@ export enum UserType {
   CONSUMIDOR = 1,
   FORNECEDOR = 2,
   ADMINISTRADOR = 3,
+  CONFAA,
 }
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   userType: UserType;
@@ -40,7 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Configura o handler de erro de autenticação
     setAuthErrorHandler(() => {
       logout();
-      window.location.href = '/login';
+      //window.location.href = '/login';
     });
   }, [token]);
 
