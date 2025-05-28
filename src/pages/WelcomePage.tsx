@@ -13,12 +13,6 @@ const WelcomePage: React.FC = () => {
           >
             Login
           </Link>
-          <Link 
-            to="/register"
-            className="px-6 py-2 rounded-md border border-black text-black font-medium hover:bg-blue-50 transition duration-200"
-          >
-            Cadastrar
-          </Link>
         </div>
       </header>
 
@@ -32,7 +26,7 @@ const WelcomePage: React.FC = () => {
             </svg>
           </div>
           
-          <h1 className="text-4xl font-bold mb-6 text-gray-800">Bem-vindo ao Lotify</h1>
+          <h1 className="text-4xl font-bold mb-6 text-gray-800">Bem-vindo ao Procureasy</h1>
           
           <p className="text-xl mb-8 text-gray-600">
             Uma plataforma completa para realizar leiões reversos para itens estocaveis da sua empresa.

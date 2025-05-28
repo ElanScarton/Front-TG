@@ -64,20 +64,6 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/settings"
-          element={
-            <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
-                <Profile />
-              </div>
-              <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
-              </div>
-            </div>
-          }
-        />
-
       <Route
           path="/activeauctions"
           element={
@@ -138,19 +124,6 @@ export default function App() {
           }
         />
         <Route
-          path="/settings"
-          element={
-            <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
-                <Profile />
-              </div>
-              <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
-              </div>
-            </div>
-          }
-        />
-        <Route
           path="/register"
           element={
             <div className="flex h-screen">
@@ -180,23 +153,10 @@ export default function App() {
             </div>
           }
         />
-        <Route
-          path="/settings"
-          element={
-            <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
-                <Profile />
-              </div>
-              <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
-              </div>
-            </div>
-          }
-        />
       </Route>
 
       {/* Rotas acessíveis a Fornecedores e Administradores */}
-      <Route element={<ProtectedRoute allowedTypes={[UserType.FORNECEDOR, UserType.ADMINISTRADOR]} />}>
+      <Route element={<ProtectedRoute allowedTypes={[UserType.FORNECEDOR, UserType.ADMINISTRADOR, UserType.CONSUMIDOR]} />}>
         <Route
           path="/auctions/:id/bid"
           element={
@@ -223,6 +183,7 @@ export default function App() {
             </div>
           }
         />
+
       </Route>
     </Routes>
   );

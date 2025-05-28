@@ -1,28 +1,41 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, History, Home, Settings, ShoppingBag, Users, BookOpen, Handshake } from "lucide-react";
-import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
-const SidebarNav = ({ onToggle }) => {
+interface NavItem {
+  icon: React.ReactNode;
+  label: string;
+  id: string;
+  path: string;
+}
+
+interface SidebarNavProps {
+  onToggle?: (isExpanded: boolean) => void;
+}
+
+const SidebarNav: React.FC<SidebarNavProps> = ({ onToggle }) => {
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(true);
   const [currentPath, setCurrentPath] = useState("");
 
   useEffect(() => {
-    // Obter a URL atual quando o componente é montado
     setCurrentPath(window.location.pathname);
     
-    // Atualizar quando a URL mudar
     const handleUrlChange = () => {
       setCurrentPath(window.location.pathname);
     };
 
-    // Adicionar event listener para detectar mudanças de URL
     window.addEventListener("popstate", handleUrlChange);
-    
-    // Limpar event listener quando o componente é desmontado
     return () => {
       window.removeEventListener("popstate", handleUrlChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (onToggle) {
+      onToggle(isExpanded);
+    }
+  }, [isExpanded, onToggle]);
 
   const toggleSidebar = () => {
     const newExpandedState = !isExpanded;
@@ -32,22 +45,48 @@ const SidebarNav = ({ onToggle }) => {
     }
   };
 
-  // Initial state notification
-  useEffect(() => {
-    if (onToggle) {
-      onToggle(isExpanded);
+  const getUserTypeLabel = (userType: number | null | undefined): string => {
+    switch (userType) {
+      case 1: return 'Consumidor';
+      case 2: return 'Fornecedor';
+      case 3: return 'Administrador';
+      default: return 'Não definido';
     }
-  }, []);
+  };
 
-  const navItems = [
-    { icon: <Home size={20} />, label: "Início", id: "home", path: "/products" },
-    { icon: <ShoppingBag size={20} />, label: "Leilões Ativos", id: "active-auctions", path: "/activeauctions" },
-    { icon: <History size={20} />, label: "Histórico de Leilão", id: "auction-history", path: "/auction-history" },
-    { icon: <BookOpen size={20} />, label: "Meus Lances", id: "my-bids", path: "/my-bids" },
-    { icon: <Settings size={20} />, label: "Configurações", id: "settings", path: "/settings" },
-    { icon: <Users size={20} />, label: "Adicionar", id: "register", path: "/register" }
-  ];
-  
+  // Define navItems based on user type
+  const navItems: NavItem[] = (() => {
+    const userType = getUserTypeLabel(user?.userType);
+
+    switch (userType) {
+      case 'Consumidor':
+        return [
+          { icon: <Home size={20} />, label: "Início", id: "home", path: "/products" },
+          { icon: <ShoppingBag size={20} />, label: "Leilões Ativos", id: "active-auctions", path: "/activeauctions" },
+          { icon: <History size={20} />, label: "Histórico de Leilão", id: "auction-history", path: "/auction-history" },
+          { icon: <Settings size={20} />, label: "Configurações", id: "settings", path: "/settings" },
+        ];
+      case 'Fornecedor':
+        return [
+          { icon: <Home size={20} />, label: "Início", id: "home", path: "/products" },
+          { icon: <BookOpen size={20} />, label: "Meus Lances", id: "my-bids", path: "/my-bids" },
+          { icon: <Settings size={20} />, label: "Configurações", id: "settings", path: "/settings" },
+        ];
+      case 'Administrador':
+        return [
+          { icon: <Home size={20} />, label: "Início", id: "home", path: "/products" },
+          { icon: <ShoppingBag size={20} />, label: "Leilões Ativos", id: "active-auctions", path: "/activeauctions" },
+          { icon: <History size={20} />, label: "Histórico de Leilão", id: "auction-history", path: "/auction-history" },
+          { icon: <Settings size={20} />, label: "Configurações", id: "settings", path: "/settings" },
+          { icon: <Users size={20} />, label: "Adicionar", id: "register", path: "/register" },
+        ];
+      default:
+        return [
+          { icon: <Home size={20} />, label: "Início", id: "home", path: "/products" },
+          { icon: <Settings size={20} />, label: "Configurações", id: "settings", path: "/settings" },
+        ];
+    }
+  })();
 
   return (
     <div 
@@ -70,9 +109,8 @@ const SidebarNav = ({ onToggle }) => {
       <nav className="flex-1 p-2">
         <ul className="space-y-2">
           {navItems.map((item) => {
-            // Verifica se este item está ativo com base na URL atual
             const isActive = item.path === currentPath || 
-                          (item.path.startsWith('/') && currentPath === item.path);
+                           (item.path.startsWith('/') && currentPath === item.path);
             
             return (
               <li key={item.id}>
