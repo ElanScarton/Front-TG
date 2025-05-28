@@ -15,6 +15,7 @@ import AuctionBidPage from "./pages/fornecedor/AuctionBidPage";
 import Profile from "./pages/Profile";
 import AuctionMonitorPage from "./pages/consumidor/AuctionMonitorPage";
 import ActiveAuctions from "./pages/consumidor/ActiveAuctionsPage";
+import AuctionHistory from "./pages/consumidor/HistoryAuctionsPage";
 
 export default function App() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -104,6 +105,21 @@ export default function App() {
             </div>
           }
         />
+
+          <Route
+          path="/auction-history"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <AuctionHistory />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} />
+              </div>
+            </div>
+          }
+        />
+
         </Route>
 
       {/* Rotas para Administradores */}

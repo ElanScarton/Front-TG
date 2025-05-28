@@ -504,7 +504,7 @@ const AuctionMonitorPage: React.FC = () => {
         {/* Action Buttons */}
         <div className="mt-6 flex justify-end space-x-3">
           <button
-            onClick={() => navigate('/auctions')}
+            onClick={() => navigate('/activeauctions')}
             className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Voltar
