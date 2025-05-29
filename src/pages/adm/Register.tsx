@@ -166,12 +166,9 @@ return (
                   <User className="h-8 w-8 text-black" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white">Crie sua conta</h1>
+                  <h1 className="text-2xl font-bold text-white"> Registrar usuários</h1>
                   <p className="text-gray-100">
-                    Já tem uma conta?{' '}
-                    <Link to="/login" className="font-medium text-blue-400 hover:text-blue-300">
-                      Entre aqui
-                    </Link>
+                    Cadastre funcionários ou fornecedores para realizar e participar de leilões
                   </p>
                 </div>
               </div>

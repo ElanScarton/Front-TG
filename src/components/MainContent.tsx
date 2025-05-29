@@ -101,12 +101,12 @@ const MainContent = ({ isExpanded }) =>{
 
     return(
         <div 
-            className={`transition-all duration-300 ml-${isExpanded ? '64' : '16'} flex-1 p-6 bg-gray-50`}
+            className={`transition-all duration-300 flex-1 p-6 bg-gray-50`}
             style={{ 
-                marginLeft: isExpanded ? '2rem' : '0rem'  // 16rem (64) when expanded, 4rem (16) when collapsed
+                marginLeft: isExpanded ? '6rem' : '0rem'  // 16rem (64) when expanded, 4rem (16) when collapsed
             }}
         >
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto ml-48">
                 {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Produtos</h1>

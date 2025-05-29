@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
 import ProductPage from "./pages/consumidor/ProductPage";
@@ -9,7 +9,7 @@ import WelcomePage from "./pages/WelcomePage";
 import AuctionCreationPage from "./pages/consumidor/AuctionCreationPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { UserType } from "./contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AuctionListPage from "./pages/consumidor/AuctionListPage";
 import AuctionBidPage from "./pages/fornecedor/AuctionBidPage";
 import Profile from "./pages/Profile";
@@ -18,7 +18,17 @@ import ActiveAuctions from "./pages/consumidor/ActiveAuctionsPage";
 import AuctionHistory from "./pages/consumidor/HistoryAuctionsPage";
 
 export default function App() {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [forceCollapsed, setForceCollapsed] = useState(false);
+  const location = useLocation();
+
+  // Reset sidebar para fechado a cada mudança de rota
+  useEffect(() => {
+    setForceCollapsed(true);
+    // Reset o forceCollapsed após um pequeno delay para permitir o efeito
+    const timer = setTimeout(() => setForceCollapsed(false), 100);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
 
   const handleSidebarToggle = (expanded: boolean) => {
     setIsExpanded(expanded);
@@ -44,7 +54,7 @@ export default function App() {
                 <MainContent isExpanded={isExpanded} />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -58,7 +68,7 @@ export default function App() {
                 <ProductPage />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -72,7 +82,7 @@ export default function App() {
                 <ActiveAuctions />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -86,7 +96,7 @@ export default function App() {
                 <AuctionMonitorPage />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -100,7 +110,7 @@ export default function App() {
                 <AuctionHistory />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -118,7 +128,7 @@ export default function App() {
                 <AuctionCreationPage />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -131,7 +141,7 @@ export default function App() {
                 <Register />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -148,7 +158,7 @@ export default function App() {
                 <AuctionListPage />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -165,7 +175,7 @@ export default function App() {
                 <AuctionBidPage />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }
@@ -178,7 +188,7 @@ export default function App() {
                 <Profile />
               </div>
               <div>
-                <SidebarNav onToggle={handleSidebarToggle} />
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
               </div>
             </div>
           }

@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, UserType } from '../../contexts/AuthContext';
 
 interface LoginFormData {
@@ -89,9 +89,12 @@ const Login = () => {
           <h1 className="text-2xl font-bold text-center text-gray-900">Entre na sua conta</h1>
           <p className="mt-2 text-center text-gray-600">
             Ou{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              cadastre-se
-            </Link>
+            <a 
+              href="mailto:contato@procureasy.com" 
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              fale conosco por e-mail
+            </a>
           </p>
         </div>
         

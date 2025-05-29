@@ -11,12 +11,20 @@ interface NavItem {
 
 interface SidebarNavProps {
   onToggle?: (isExpanded: boolean) => void;
+  forceCollapsed?: boolean; // Nova prop para forçar o estado
 }
 
-const SidebarNav: React.FC<SidebarNavProps> = ({ onToggle }) => {
+const SidebarNav: React.FC<SidebarNavProps> = ({ onToggle, forceCollapsed = false }) => {
   const { user } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false); // Começa sempre fechado
   const [currentPath, setCurrentPath] = useState("");
+
+  // Effect para forçar o collapse quando forceCollapsed muda
+  useEffect(() => {
+    if (forceCollapsed) {
+      setIsExpanded(false);
+    }
+  }, [forceCollapsed]);
 
   useEffect(() => {
     setCurrentPath(window.location.pathname);
