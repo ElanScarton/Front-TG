@@ -1,71 +1,94 @@
-// src/contexts/AuthContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService } from '../services/api';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { setTokenProvider, setAuthErrorHandler } from '../data/api'; // Importa as funções de configuração
+import { login, logout, isAuthenticated, getUserType, canAccess } from '../services/authService'; // Importa funções do serviço
 
-interface User {
-  id: string;
+// Definindo enum para tipos de usuário
+export enum UserType {
+  CONSUMIDOR = 1,
+  FORNECEDOR = 2,
+  ADMINISTRADOR = 3,
+  CONFAA,
+}
+
+export interface User {
+  id: number;
   name: string;
   email: string;
+  userType: UserType;
 }
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  token: string | null;
+  login: (email: string, senha: string) => Promise<void>;
   logout: () => void;
+  isAuthenticated: () => boolean;
+  getUserType: () => UserType | null;
+  canAccess: (allowedTypes: UserType[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
+  // Configurar o provedor de token para o api.ts
   useEffect(() => {
-    // Carrega o usuário do localStorage ao iniciar
-    const loadUser = () => {
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
-      setIsLoading(false);
-    };
-    
-    loadUser();
-  }, []);
+    // Configura o provedor de token para usar nosso estado atual
+    setTokenProvider(() => token);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await authService.login(email, password);
-      setUser(response.user);
-      return response;
-    } catch (error) {
-      throw error;
+    // Configura o handler de erro de autenticação
+    setAuthErrorHandler(() => {
+      logout();
+      //window.location.href = '/login';
+    });
+  }, [token]);
+
+  // Carregar usuário do localStorage ao iniciar
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser && token) {
+      setUser(JSON.parse(storedUser));
     }
+  }, [token]);
+
+  // Função de login que utiliza o authService
+  const handleLogin = async (email: string, senha: string) => {
+    const { token, user } = await login(email, senha);
+    setToken(token);
+    setUser(user);
   };
 
-  const register = async (userData: any) => {
-    try {
-      return await authService.register(userData);
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const logout = () => {
-    authService.logout();
+  // Funções que utilizam o authService
+  const handleLogout = () => {
+    logout();
     setUser(null);
+    setToken(null);
+  };
+
+  const handleIsAuthenticated = () => {
+    return isAuthenticated(token);
+  };
+
+  const handleGetUserType = () => {
+    return getUserType(user);
+  };
+
+  const handleCanAccess = (allowedTypes: UserType[]) => {
+    return canAccess(user, allowedTypes);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        register,
-        logout
+        token,
+        login: handleLogin,
+        logout: handleLogout,
+        isAuthenticated: handleIsAuthenticated,
+        getUserType: handleGetUserType,
+        canAccess: handleCanAccess,
       }}
     >
       {children}
@@ -75,7 +98,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

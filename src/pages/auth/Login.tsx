@@ -1,28 +1,18 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Ou use fetch nativo
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuth, UserType } from '../../contexts/AuthContext';
 
 interface LoginFormData {
   email: string;
-  password: string;
-}
-
-interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  }
+  senha: string; // Alterado de "password" para "senha" para corresponder ao backend
 }
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, getUserType } = useAuth(); // Extrair getUserType aqui no nível superior
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
-    password: ''
+    senha: '' // Alterado de "password" para "senha"
   });
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +43,8 @@ const Login = () => {
       newErrors.email = 'Email inválido';
     }
     
-    if (!formData.password) {
-      newErrors.password = 'Senha é obrigatória';
+    if (!formData.senha) {
+      newErrors.senha = 'Senha é obrigatória';
     }
     
     setErrors(newErrors);
@@ -69,10 +59,25 @@ const Login = () => {
       setApiError(null);
       
       try {
-        await login(formData.email, formData.password);
-        navigate('/products');
+        await login(formData.email, formData.senha);
+        
+        // Redirecionar com base no tipo de usuário
+        const userType = getUserType(); // Usar a função extraída anteriormente
+        
+        if (userType === UserType.FORNECEDOR) {
+          navigate('/list');
+        } else if (userType === UserType.CONSUMIDOR) {
+          navigate('/products');
+        } else if (userType === UserType.ADMINISTRADOR) {
+          navigate('/products'); // Ou qualquer outra rota admin
+        } else {
+          navigate('/products'); // Fallback
+        }
       } catch (error) {
+        console.error('Erro ao fazer login:', error);
         setApiError('Email ou senha incorretos');
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -84,9 +89,12 @@ const Login = () => {
           <h1 className="text-2xl font-bold text-center text-gray-900">Entre na sua conta</h1>
           <p className="mt-2 text-center text-gray-600">
             Ou{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              cadastre-se
-            </Link>
+            <a 
+              href="mailto:contato@procureasy.com" 
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              fale conosco por e-mail
+            </a>
           </p>
         </div>
         
@@ -118,22 +126,22 @@ const Login = () => {
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
                 Senha
               </label>
               <input
-                id="password"
-                name="password"
+                id="senha"
+                name="senha"
                 type="password"
                 autoComplete="current-password"
                 required
-                value={formData.password}
+                value={formData.senha}
                 onChange={handleChange}
                 className={`mt-1 block w-full px-3 py-2 border ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
+                  errors.senha ? 'border-red-500' : 'border-gray-300'
                 } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               />
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.senha && <p className="mt-1 text-sm text-red-600">{errors.senha}</p>}
             </div>
           </div>
 

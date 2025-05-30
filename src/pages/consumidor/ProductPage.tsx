@@ -37,10 +37,7 @@ const ProductPage = () => {
         return <h1>Loading...</h1>
     }
 
-    return <div className="p-5 w-[60%]">
-        <button onClick={()=> navigate(-1)} className="mb-5 px-4 py-2 bg-black text-white rounded">
-            Back
-        </button>
+    return <div className="p-5 w-[60%] ml-[28rem]">
 
         <button 
         onClick={handleCreateAuction}
