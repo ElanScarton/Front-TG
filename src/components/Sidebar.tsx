@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react"
 import { Filter } from "lucide-react";
 import { useFilter } from "../contexts/FilterContext";
+import { getProducts } from "../services/productService";
 
 interface Product {
-    category: string;
-}
-
-interface FetchResponse {
-    products: Product[]
+    area: string;
 }
 
 const Sidebar = () => {
@@ -23,32 +20,31 @@ const Sidebar = () => {
         setKeyword,
     } = useFilter();
 
-    const [categories, setCategories] = useState<string[]>([]);
+    const [area, setAreas] = useState<string[]>([]);
     const [keywords] = useState<string []>([
-        "apple",
-        "watch",
-        "Fashion",
-        "trend",
-        "shoes",
-        "shirt",
+        "chave",
+        "luva",
+        "parafuso",
+        "fita",
+        "presilha",
+        "saco",
     ])
 
-    useEffect(() => {
-        const fetchCategories = async () => {
+     useEffect(() => {
+        const fetchArea = async () => {
             try {
-                const response = await fetch('https://dummyjson.com/products')//no link podemos colocar o link da nossa api de produtos
-                const data: FetchResponse = await response.json()
+                const products = await getProducts(); // <-- Usando o service
                 const uniqueCategories = Array.from(
-                    new Set(data.products.map(product => product.category))
-                ); //seta para aparecer unicamente as categorias
-                setCategories(uniqueCategories);
+                    new Set(products.map((product: Product) => product.area))
+                );
+                setAreas(uniqueCategories);
             } catch (error) {
-                console.error('Error fetchin product', error)
+                console.error("Error fetching product categories", error);
             }
         };
 
-        fetchCategories();
-    }, [])
+        fetchArea();
+    }, []);
 
 
 
@@ -131,17 +127,17 @@ const Sidebar = () => {
                     <div>
                         <h3 className="text-sm font-medium text-gray-700 mb-3">Categorias</h3>
                         <div className="max-h-40 overflow-y-auto space-y-1">
-                            {categories.map((category, index) => (
+                            {area.map((area, index) => (
                                 <label key={index} className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
                                     <input
                                         type="radio"
                                         name="category"
-                                        value={category} 
-                                        onChange={() => handleRadioChangeCategories(category)}
+                                        value={area} 
+                                        onChange={() => handleRadioChangeCategories(area)}
                                         className="mr-3 w-4 h-4 text-blue-600"
-                                        checked={selectedCategory == category}
+                                        checked={selectedCategory == area}
                                     />
-                                    <span className="text-sm">{category.toUpperCase()}</span>
+                                    <span className="text-sm">{area.toUpperCase()}</span>
                                 </label>
                             ))}
                         </div>

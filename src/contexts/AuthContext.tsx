@@ -12,7 +12,7 @@ export enum UserType {
 
 export interface User {
   id: number;
-  name: string;
+  nome: string;
   email: string;
   userType: UserType;
 }

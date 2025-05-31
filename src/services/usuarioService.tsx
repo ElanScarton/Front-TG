@@ -2,22 +2,21 @@ import api from '../data/api'; // Assuming api.ts is in the same directory
 
 // Define an interface for the Product data structure.
 // Adjust this based on the actual structure of your product data.
-interface Product {
+interface Usuario {
   id: number;
   nome: string;
-  quantidade: number;
-  valor: number;
-  descricao: string;
-  area: string
+  email: string;
+  tipoUsuario: string;
+  cpf: string;
+  cnpj: string;
   ativo: boolean;
   dataCriacao: string;
-  dataAtualizacao: string;
 }
 
 // Function to fetch all products
-export const getProducts = async (): Promise<Product[]> => {
+export const getUsuarios = async (): Promise<Usuario[]> => {
   try {
-    const response = await api.get<Product[]>('/produtos');
+    const response = await api.get<Usuario[]>('/Usuario');
     return response.data;
   } catch (error) {
     console.error("Error fetching products:", error);

@@ -42,6 +42,8 @@ export interface UpdateUserData {
   cnpj?: string;
   cpf?: string;
   senha?: string;
+  tipoUsuario: number;
+  senhaAtual: string; // Senha atual para confirmação
 }
 
 // Função para registrar um novo usuário
@@ -82,17 +84,22 @@ export const getUserById = async (userId: number): Promise<UserData> => {
 
 // Função para atualizar dados do usuário
 export const updateUser = async (userId: number, userData: UpdateUserData): Promise<UserData> => {
-  // eslint-disable-next-line no-useless-catch
   try {
-    // Prepara os dados para envio, removendo campos vazios
-    const updatePayload: any = {
-      nome: userData.nome,
-      email: userData.email,
-      cnpj: userData.cnpj || "",
-      cpf: userData.cpf || "",
+    // Buscar dados atuais do usuário para completar as informações
+    const currentUserData = await getUserById(userId);
+    
+    // Prepara os dados completos para envio conforme esperado pela API
+    const updatePayload = {
+      nome: userData.nome || currentUserData.nome,
+      email: userData.email || currentUserData.email,
+      cpf: userData.cpf || currentUserData.cpf || "",
+      cnpj: userData.cnpj || currentUserData.cnpj || "",
+      tipoUsuario: userData.tipoUsuario || currentUserData.tipoUsuario,
+      // Para validação, incluir a senha atual
+      senhaAtual: userData.senhaAtual
     };
 
-    // Adiciona senha apenas se foi fornecida
+    // Adiciona nova senha apenas se foi fornecida
     if (userData.senha && userData.senha.trim() !== '') {
       updatePayload.senha = userData.senha;
     }
@@ -100,7 +107,66 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     const response = await api.put<UserData>(`/Usuario/${userId}`, updatePayload);
     return response.data;
   } catch (error) {
+    console.error('Erro no updateUser:', error);
+    
+    // Tratamento específico para diferentes tipos de erro
+    if (error.response?.status === 401) {
+      throw new Error('Senha atual incorreta');
+    } else if (error.response?.status === 400) {
+      const errorMessage = error.response?.data?.message || error.response?.data || 'Dados inválidos';
+      
+      // Verificar se é erro de senha fraca
+      if (errorMessage.includes('senha') || errorMessage.includes('password')) {
+        throw new Error('Senha fraca. Use no mínimo 8 caracteres, com letra maiúscula, minúscula, número e símbolo.');
+      }
+      
+      throw new Error(errorMessage);
+    } else if (error.response?.status === 422) {
+      throw new Error('Dados de entrada inválidos. Verifique as informações fornecidas.');
+    }
+    
     throw error;
+  }
+};
+
+// Função alternativa caso a API não aceite senhaAtual
+export const updateUserAlternative = async (userId: number, userData: UpdateUserData): Promise<UserData> => {
+  try {
+    // Buscar dados atuais do usuário para completar as informações
+    const currentUserData = await getUserById(userId);
+    
+    // Prepara os dados completos para envio conforme o formato esperado
+    const updatePayload = {
+      nome: userData.nome || currentUserData.nome,
+      email: userData.email || currentUserData.email,
+      cpf: userData.cpf || currentUserData.cpf || "",
+      cnpj: userData.cnpj || currentUserData.cnpj || "",
+      tipoUsuario: userData.tipoUsuario !== undefined ? userData.tipoUsuario : currentUserData.tipoUsuario
+    };
+
+    // Adiciona nova senha apenas se foi fornecida
+    if (userData.senha && userData.senha.trim() !== '') {
+      updatePayload.senha = userData.senha;
+    }
+
+    const response = await api.put<UserData>(`/Usuario/${userId}`, updatePayload);
+    return response.data;
+  } catch (error) {
+    console.error('Erro no updateUserAlternative:', error);
+    throw error;
+  }
+};
+
+// Função para validar senha atual (se a API tiver endpoint específico)
+export const validateCurrentPassword = async (userId: number, password: string): Promise<boolean> => {
+  try {
+    const response = await api.post(`/Usuario/${userId}/validate-password`, {
+      senha: password
+    });
+    return response.data.valid;
+  } catch (error) {
+    console.error('Erro ao validar senha:', error);
+    return false;
   }
 };
 

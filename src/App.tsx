@@ -74,6 +74,20 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/product/:id/create-auction"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <AuctionCreationPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
+              </div>
+            </div>
+          }
+        />
+
       <Route
           path="/activeauctions"
           element={
@@ -120,19 +134,7 @@ export default function App() {
 
       {/* Rotas para Administradores */}
       <Route element={<ProtectedRoute allowedTypes={[UserType.ADMINISTRADOR]} />}>
-        <Route
-          path="/product/:id/create-auction"
-          element={
-            <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
-                <AuctionCreationPage />
-              </div>
-              <div>
-                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
-              </div>
-            </div>
-          }
-        />
+        
         <Route
           path="/register"
           element={
