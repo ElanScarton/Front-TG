@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { getLeiloes } from '../../services/auctionService';
+import { getLances } from '../../services/lanceService';
+import { getUsuarios } from '../../services/usuarioService';
 
 interface Usuario {
   id: number;
   nome: string;
   email: string;
+  tipoUsuario?: string;
+  cpf?: string;
+  cnpj?: string;
+  ativo?: boolean;
+  dataCriacao?: string;
 }
 
 interface Produto {
@@ -35,7 +44,7 @@ interface Leilao {
   dataInicio: string;
   dataTermino: string;
   dataEntrega: string;
-  status: 'Rascunho' | 'Publicado' | 'EmAndamento' | 'Finalizado' | 'Cancelado';
+  status: 'Ativo' | 'Encerrado' | 'Cancelado';
   produtoId: number;
   usuarioId: number;
   dataCriacao: string;
@@ -47,190 +56,132 @@ interface Leilao {
 
 const AuctionHistory: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // State management
   const [leiloes, setLeiloes] = useState<Leilao[]>([]);
+  const [lances, setLances] = useState<Lance[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
 
-    // Mock data - Replace with actual API calls
-  const mockLeiloes: Leilao[] = [
-    {
-      id: 1,
-      titulo: 'iPhone 15 Pro Max',
-      descricao: 'Smartphone Apple iPhone 15 Pro Max 256GB',
-      precoInicial: 8999.00,
-      precoFinal: null,
-      dataInicio: '2024-01-15T09:00:00',
-      dataTermino: '2024-01-15T17:00:00',
-      dataEntrega: '2024-01-20T09:00:00',
-      status: 'Cancelado',
-      produtoId: 1,
-      usuarioId: 1,
-      dataCriacao: '2024-01-14T15:30:00',
-      dataAtualizacao: '2024-01-15T16:45:00',
-      produto: {
-        id: 1,
-        titulo: 'iPhone 15 Pro Max',
-        descricao: 'Smartphone Apple iPhone 15 Pro Max 256GB',
-        preco: 8999.00,
-        thumbnail: 'https://cdn.dummyjson.com/product-images/1/thumbnail.jpg'
-      },
-      usuario: {
-        id: 1,
-        nome: 'João Silva',
-        email: 'joao@empresa.com'
-      },
-      lances: [
-        {
-          id: 1,
-          valor: 8500.00,
-          vencedor: false,
-          observacao: 'Primeira oferta',
-          usuarioId: 2,
-          leilaoId: 1,
-          dataCriacao: '2024-01-15T10:15:00',
-          usuario: { id: 2, nome: 'TechSupply Inc.', email: 'contato@techsupply.com' }
-        },
-        {
-          id: 2,
-          valor: 8200.00,
-          vencedor: false,
-          observacao: 'Melhor oferta disponível',
-          usuarioId: 3,
-          leilaoId: 1,
-          dataCriacao: '2024-01-15T11:30:00',
-          usuario: { id: 3, nome: 'Global Electronics', email: 'vendas@global.com' }
-        }
-      ]
-    },
-    {
-      id: 2,
-      titulo: 'MacBook Pro M3',
-      descricao: 'MacBook Pro 14" com chip M3, 16GB RAM, 512GB SSD',
-      precoInicial: 15999.00,
-      precoFinal: null,
-      dataInicio: '2024-01-15T08:00:00',
-      dataTermino: '2024-01-15T18:00:00',
-      dataEntrega: '2024-01-22T09:00:00',
-      status: 'EmAndamento',
-      produtoId: 2,
-      usuarioId: 1,
-      dataCriacao: '2024-01-14T10:00:00',
-      dataAtualizacao: '2024-01-15T16:00:00',
-      produto: {
-        id: 2,
-        titulo: 'MacBook Pro M3',
-        descricao: 'MacBook Pro 14" com chip M3, 16GB RAM, 512GB SSD',
-        preco: 15999.00,
-        thumbnail: 'https://cdn.dummyjson.com/product-images/6/thumbnail.png'
-      },
-      usuario: {
-        id: 1,
-        nome: 'João Silva',
-        email: 'joao@empresa.com'
-      },
-      lances: [
-        {
-          id: 3,
-          valor: 15200.00,
-          vencedor: false,
-          observacao: 'Oferta inicial',
-          usuarioId: 4,
-          leilaoId: 2,
-          dataCriacao: '2024-01-15T09:15:00',
-          usuario: { id: 4, nome: 'Digital Solutions', email: 'propostas@digital.com' }
-        }
-      ]
-    },
-    {
-      id: 3,
-      titulo: 'Samsung Galaxy S24 Ultra',
-      descricao: 'Smartphone Samsung Galaxy S24 Ultra 512GB',
-      precoInicial: 7499.00,
-      precoFinal: null,
-      dataInicio: '2024-01-15T10:00:00',
-      dataTermino: '2024-01-15T16:00:00',
-      dataEntrega: '2024-01-18T14:00:00',
-      status: 'EmAndamento',
-      produtoId: 3,
-      usuarioId: 2,
-      dataCriacao: '2024-01-14T14:00:00',
-      dataAtualizacao: '2024-01-15T15:30:00',
-      produto: {
-        id: 3,
-        titulo: 'Samsung Galaxy S24 Ultra',
-        descricao: 'Smartphone Samsung Galaxy S24 Ultra 512GB',
-        preco: 7499.00,
-        thumbnail: 'https://cdn.dummyjson.com/product-images/2/thumbnail.jpg'
-      },
-      usuario: {
-        id: 2,
-        nome: 'Maria Santos',
-        email: 'maria@empresa.com'
-      },
-      lances: [
-        {
-          id: 4,
-          valor: 7100.00,
-          vencedor: false,
-          observacao: 'Proposta competitiva',
-          usuarioId: 5,
-          leilaoId: 3,
-          dataCriacao: '2024-01-15T12:00:00',
-          usuario: { id: 5, nome: 'Office Depot', email: 'licitacoes@office.com' }
-        },
-        {
-          id: 5,
-          valor: 6950.00,
-          vencedor: false,
-          observacao: 'Melhor preço',
-          usuarioId: 3,
-          leilaoId: 3,
-          dataCriacao: '2024-01-15T14:30:00',
-          usuario: { id: 3, nome: 'Global Electronics', email: 'vendas@global.com' }
-        }
-      ]
+  // Função para buscar usuários
+  const fetchUsuarios = async () => {
+    try {
+      const usuariosData = await getUsuarios();
+      setUsuarios(usuariosData);
+      return usuariosData;
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+      return [];
     }
-  ];
+  };
 
-  // Fetch all auctions data
+  // Função para buscar todos os lances
+  const fetchLances = async () => {
+    try {
+      const lancesData = await getLances();
+      setLances(lancesData);
+      return lancesData;
+    } catch (error) {
+      console.error('Erro ao buscar lances:', error);
+      return [];
+    }
+  };
+
+  // Função para buscar todos os leilões
+  const fetchLeiloes = async (usuarios: Usuario[], lances: Lance[]) => {
+    try {
+      const leiloesData = await getLeiloes();
+      
+      // Converter status numérico para string
+      const statusMap: { [key: number]: 'Ativo' | 'Encerrado' | 'Cancelado' } = {
+        0: 'Ativo',
+        1: 'Encerrado',
+        2: 'Cancelado'
+      };
+
+      const mappedLeiloes: Leilao[] = leiloesData.map((leilao: any) => {
+        // Buscar lances do leilão
+        const lancesDoLeilao = lances
+          .filter(lance => lance.leilaoId === leilao.id)
+          .map(lance => {
+            const usuarioEncontrado = usuarios.find(u => u.id === lance.usuarioId);
+            return {
+              ...lance,
+              usuario: usuarioEncontrado || { 
+                id: lance.usuarioId, 
+                nome: 'Nome não disponível', 
+                email: 'Email não disponível' 
+              }
+            };
+          });
+
+        return {
+          ...leilao,
+          status: statusMap[leilao.status] || 'Ativo',
+          lances: lancesDoLeilao,
+          produto: leilao.produto || { 
+            id: 0, 
+            titulo: leilao.titulo || '', 
+            descricao: leilao.descricao || '', 
+            preco: leilao.precoInicial || 0, 
+            thumbnail: 'https://via.placeholder.com/300x200?text=Sem+Imagem' 
+          },
+          usuario: leilao.usuario || usuarios.find(u => u.id === leilao.usuarioId) || { 
+            id: leilao.usuarioId || 0, 
+            nome: 'Nome não disponível', 
+            email: 'Email não disponível' 
+          }
+        };
+      });
+
+      setLeiloes(mappedLeiloes);
+      console.log('Leilões carregados:', mappedLeiloes);
+      
+    } catch (error) {
+      console.error('Erro ao buscar leilões:', error);
+      throw error;
+    }
+  };
+
+  // Fetch all data
   useEffect(() => {
-    const fetchLeiloes = async () => {
+    const fetchAllData = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        // Replace with actual API call for all auctions
-        // const response = await fetch('/api/leiloes');
-        // const data = await response.json();
+        // Buscar dados em paralelo
+        const [usuariosData, lancesData] = await Promise.all([
+          fetchUsuarios(),
+          fetchLances()
+        ]);
+
+        // Buscar leilões com os dados de usuários e lances já carregados
+        await fetchLeiloes(usuariosData, lancesData);
         
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const activeLeiloes = mockLeiloes
-        setLeiloes(activeLeiloes); // Add your mock data here
       } catch (err) {
+        console.error('Erro ao carregar dados:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar histórico de leilões');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchLeiloes();
+    fetchAllData();
   }, []);
 
   // Get auction status info
   const getStatusInfo = (status: string) => {
     const statusMap = {
-      'Rascunho': { color: 'bg-gray-100 text-gray-800', label: 'Rascunho' },
-      'Publicado': { color: 'bg-blue-100 text-blue-800', label: 'Publicado' },
-      'EmAndamento': { color: 'bg-green-100 text-green-800', label: 'Em Andamento' },
-      'Finalizado': { color: 'bg-purple-100 text-purple-800', label: 'Finalizado' },
+      'Ativo': { color: 'bg-green-100 text-green-800', label: 'Ativo' },
+      'Encerrado': { color: 'bg-purple-100 text-purple-800', label: 'Encerrado' },
       'Cancelado': { color: 'bg-red-100 text-red-800', label: 'Cancelado' }
     };
-    return statusMap[status as keyof typeof statusMap] || statusMap['Rascunho'];
+    return statusMap[status as keyof typeof statusMap] || statusMap['Ativo'];
   };
 
   // Format currency
@@ -265,6 +216,18 @@ const AuctionHistory: React.FC = () => {
     navigate(`/AuctionMonitorPage/${leilaoId}`);
   };
 
+  // Calculate statistics
+  const getStatistics = () => {
+    return {
+      ativo: leiloes.filter(l => l.status === 'Ativo').length,
+      encerrado: leiloes.filter(l => l.status === 'Encerrado').length,
+      cancelado: leiloes.filter(l => l.status === 'Cancelado').length,
+      totalLances: leiloes.reduce((total, leilao) => total + leilao.lances.length, 0)
+    };
+  };
+
+  const stats = getStatistics();
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -279,6 +242,12 @@ const AuctionHistory: React.FC = () => {
         <div className="bg-red-50 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-red-700 mb-2">Erro ao carregar histórico</h2>
           <p className="text-red-600">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Tentar Novamente
+          </button>
         </div>
       </div>
     );
@@ -303,10 +272,8 @@ const AuctionHistory: React.FC = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Em Andamento</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {leiloes.filter(l => l.status === 'EmAndamento').length}
-                </p>
+                <p className="text-sm font-medium text-gray-600">Ativos</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.ativo}</p>
               </div>
             </div>
           </div>
@@ -319,10 +286,8 @@ const AuctionHistory: React.FC = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Finalizados</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {leiloes.filter(l => l.status === 'Finalizado').length}
-                </p>
+                <p className="text-sm font-medium text-gray-600">Encerrados</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.encerrado}</p>
               </div>
             </div>
           </div>
@@ -336,9 +301,7 @@ const AuctionHistory: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Cancelados</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {leiloes.filter(l => l.status === 'Cancelado').length}
-                </p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.cancelado}</p>
               </div>
             </div>
           </div>
@@ -352,9 +315,7 @@ const AuctionHistory: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total de Lances</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {leiloes.reduce((total, leilao) => total + leilao.lances.length, 0)}
-                </p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalLances}</p>
               </div>
             </div>
           </div>
@@ -364,7 +325,7 @@ const AuctionHistory: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <div className="flex flex-wrap gap-2">
-              {['Todos', 'EmAndamento', 'Publicado', 'Finalizado', 'Cancelado'].map((status) => (
+              {['Todos', 'Ativo', 'Encerrado', 'Cancelado'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
@@ -375,9 +336,8 @@ const AuctionHistory: React.FC = () => {
                   }`}
                 >
                   {status === 'Todos' ? 'Todos' : 
-                   status === 'EmAndamento' ? 'Em Andamento' : 
-                   status === 'Publicado' ? 'Publicados' : 
-                   status === 'Finalizado' ? 'Finalizados' : 'Cancelados'}
+                   status === 'Ativo' ? 'Ativos' : 
+                   status === 'Encerrado' ? 'Encerrados' : 'Cancelados'}
                 </button>
               ))}
             </div>
@@ -412,7 +372,12 @@ const AuctionHistory: React.FC = () => {
                 </svg>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pregão encontrado</h3>
-              <p className="text-gray-500">Ajuste os filtros ou tente uma busca diferente.</p>
+              <p className="text-gray-500">
+                {leiloes.length === 0 
+                  ? 'Nenhum pregão foi registrado ainda no sistema.'
+                  : 'Ajuste os filtros ou tente uma busca diferente.'
+                }
+              </p>
             </div>
           ) : (
             filteredLeiloes.map((leilao) => {
@@ -443,6 +408,10 @@ const AuctionHistory: React.FC = () => {
                         src={leilao.produto.thumbnail}
                         alt={leilao.produto.titulo}
                         className="w-full h-32 object-cover rounded-md"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://via.placeholder.com/300x200?text=Sem+Imagem';
+                        }}
                       />
                     </div>
 
@@ -520,7 +489,7 @@ const AuctionHistory: React.FC = () => {
                         Ver Detalhes
                       </button>
                       
-                      {leilao.status === 'Finalizado' && (
+                      {leilao.status === 'Encerrado' && (
                         <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
                           Relatório
                         </button>

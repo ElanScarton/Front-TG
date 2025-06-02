@@ -1,6 +1,7 @@
 // ActiveAuctions.tsx - Página para leilões Em Andamento
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getLeiloes } from '../../services/auctionService';
 
 interface Usuario {
   id: number;
@@ -36,7 +37,7 @@ interface Leilao {
   dataInicio: string;
   dataTermino: string;
   dataEntrega: string;
-  status: 'Rascunho' | 'Publicado' | 'EmAndamento' | 'Finalizado' | 'Cancelado';
+  status: number;
   produtoId: number;
   usuarioId: number;
   dataCriacao: string;
@@ -55,147 +56,6 @@ const ActiveAuctions: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data - Replace with actual API calls
-  const mockLeiloes: Leilao[] = [
-    {
-      id: 1,
-      titulo: 'iPhone 15 Pro Max',
-      descricao: 'Smartphone Apple iPhone 15 Pro Max 256GB',
-      precoInicial: 8999.00,
-      precoFinal: null,
-      dataInicio: '2024-01-15T09:00:00',
-      dataTermino: '2024-01-15T17:00:00',
-      dataEntrega: '2024-01-20T09:00:00',
-      status: 'EmAndamento',
-      produtoId: 1,
-      usuarioId: 1,
-      dataCriacao: '2024-01-14T15:30:00',
-      dataAtualizacao: '2024-01-15T16:45:00',
-      produto: {
-        id: 1,
-        titulo: 'iPhone 15 Pro Max',
-        descricao: 'Smartphone Apple iPhone 15 Pro Max 256GB',
-        preco: 8999.00,
-        thumbnail: 'https://cdn.dummyjson.com/product-images/1/thumbnail.jpg'
-      },
-      usuario: {
-        id: 1,
-        nome: 'João Silva',
-        email: 'joao@empresa.com'
-      },
-      lances: [
-        {
-          id: 1,
-          valor: 8500.00,
-          vencedor: false,
-          observacao: 'Primeira oferta',
-          usuarioId: 2,
-          leilaoId: 1,
-          dataCriacao: '2024-01-15T10:15:00',
-          usuario: { id: 2, nome: 'TechSupply Inc.', email: 'contato@techsupply.com' }
-        },
-        {
-          id: 2,
-          valor: 8200.00,
-          vencedor: false,
-          observacao: 'Melhor oferta disponível',
-          usuarioId: 3,
-          leilaoId: 1,
-          dataCriacao: '2024-01-15T11:30:00',
-          usuario: { id: 3, nome: 'Global Electronics', email: 'vendas@global.com' }
-        }
-      ]
-    },
-    {
-      id: 2,
-      titulo: 'MacBook Pro M3',
-      descricao: 'MacBook Pro 14" com chip M3, 16GB RAM, 512GB SSD',
-      precoInicial: 15999.00,
-      precoFinal: null,
-      dataInicio: '2024-01-15T08:00:00',
-      dataTermino: '2024-01-15T18:00:00',
-      dataEntrega: '2024-01-22T09:00:00',
-      status: 'EmAndamento',
-      produtoId: 2,
-      usuarioId: 1,
-      dataCriacao: '2024-01-14T10:00:00',
-      dataAtualizacao: '2024-01-15T16:00:00',
-      produto: {
-        id: 2,
-        titulo: 'MacBook Pro M3',
-        descricao: 'MacBook Pro 14" com chip M3, 16GB RAM, 512GB SSD',
-        preco: 15999.00,
-        thumbnail: 'https://cdn.dummyjson.com/product-images/6/thumbnail.png'
-      },
-      usuario: {
-        id: 1,
-        nome: 'João Silva',
-        email: 'joao@empresa.com'
-      },
-      lances: [
-        {
-          id: 3,
-          valor: 15200.00,
-          vencedor: false,
-          observacao: 'Oferta inicial',
-          usuarioId: 4,
-          leilaoId: 2,
-          dataCriacao: '2024-01-15T09:15:00',
-          usuario: { id: 4, nome: 'Digital Solutions', email: 'propostas@digital.com' }
-        }
-      ]
-    },
-    {
-      id: 3,
-      titulo: 'Samsung Galaxy S24 Ultra',
-      descricao: 'Smartphone Samsung Galaxy S24 Ultra 512GB',
-      precoInicial: 7499.00,
-      precoFinal: null,
-      dataInicio: '2024-01-15T10:00:00',
-      dataTermino: '2024-01-15T16:00:00',
-      dataEntrega: '2024-01-18T14:00:00',
-      status: 'EmAndamento',
-      produtoId: 3,
-      usuarioId: 2,
-      dataCriacao: '2024-01-14T14:00:00',
-      dataAtualizacao: '2024-01-15T15:30:00',
-      produto: {
-        id: 3,
-        titulo: 'Samsung Galaxy S24 Ultra',
-        descricao: 'Smartphone Samsung Galaxy S24 Ultra 512GB',
-        preco: 7499.00,
-        thumbnail: 'https://cdn.dummyjson.com/product-images/2/thumbnail.jpg'
-      },
-      usuario: {
-        id: 2,
-        nome: 'Maria Santos',
-        email: 'maria@empresa.com'
-      },
-      lances: [
-        {
-          id: 4,
-          valor: 7100.00,
-          vencedor: false,
-          observacao: 'Proposta competitiva',
-          usuarioId: 5,
-          leilaoId: 3,
-          dataCriacao: '2024-01-15T12:00:00',
-          usuario: { id: 5, nome: 'Office Depot', email: 'licitacoes@office.com' }
-        },
-        {
-          id: 5,
-          valor: 6950.00,
-          vencedor: false,
-          observacao: 'Melhor preço',
-          usuarioId: 3,
-          leilaoId: 3,
-          dataCriacao: '2024-01-15T14:30:00',
-          usuario: { id: 3, nome: 'Global Electronics', email: 'vendas@global.com' }
-        }
-      ]
-    }
-  ];
-
   // Fetch auctions data
   useEffect(() => {
     const fetchLeiloes = async () => {
@@ -203,17 +63,27 @@ const ActiveAuctions: React.FC = () => {
       setError(null);
       
       try {
-        // Replace with actual API call
-        // const response = await fetch('/api/leiloes?status=EmAndamento');
-        // const data = await response.json();
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const data = await getLeiloes();
+        console.log(data)
         
         // Filter only active auctions
-        const activeLeiloes = mockLeiloes.filter(leilao => leilao.status === 'EmAndamento');
+        const activeLeiloes = data.filter(leilao => {
+          // Se a API não retornar o campo status, verificamos se está em andamento pela data
+          if (leilao.status !== undefined) {
+            return leilao.status === 0;
+          } else {
+            // Verifica se o leilão está em andamento baseado nas datas
+            const now = new Date();
+            const inicio = new Date(leilao.dataInicio);
+            const termino = new Date(leilao.dataTermino);
+            return now >= inicio && now <= termino;
+          }
+        });
+        console.log(activeLeiloes)
+
         setLeiloes(activeLeiloes);
       } catch (err) {
+        console.error('Erro ao buscar leilões:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar leilões');
       } finally {
         setIsLoading(false);
@@ -252,14 +122,16 @@ const ActiveAuctions: React.FC = () => {
 
   // Get best bid for auction
   const getBestBid = (lances: Lance[]) => {
-    if (lances.length === 0) return null;
+    if (!lances || lances.length === 0) return null;
     return Math.min(...lances.map(lance => lance.valor));
   };
 
   // Filter auctions by search term
   const filteredLeiloes = leiloes.filter(leilao => {
-    return leilao.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           leilao.produto.titulo.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    return leilao.titulo.toLowerCase().includes(searchLower) ||
+           leilao.descricao.toLowerCase().includes(searchLower) ||
+           (leilao.produto?.titulo?.toLowerCase().includes(searchLower));
   });
 
   // Navigate to auction monitor
@@ -270,6 +142,32 @@ const ActiveAuctions: React.FC = () => {
   // Navigate to history page
   const handleViewHistory = () => {
     navigate('/auction-history');
+  };
+
+  // Refresh auctions
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const data = await getLeiloes();
+      const activeLeiloes = data.filter(leilao => {
+        if (leilao.status) {
+          return leilao.status === 0;
+        } else {
+          const now = new Date();
+          const inicio = new Date(leilao.dataInicio);
+          const termino = new Date(leilao.dataTermino);
+          return now >= inicio && now <= termino;
+        }
+      });
+      setLeiloes(activeLeiloes);
+    } catch (err) {
+      console.error('Erro ao atualizar leilões:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar leilões');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -285,7 +183,13 @@ const ActiveAuctions: React.FC = () => {
       <div className="flex items-center justify-center h-full">
         <div className="bg-red-50 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-red-700 mb-2">Erro ao carregar pregões</h2>
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Tentar Novamente
+          </button>
         </div>
       </div>
     );
@@ -300,12 +204,21 @@ const ActiveAuctions: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Pregões Em Andamento</h1>
             <p className="text-gray-600">Acompanhe todos os pregões eletrônicos ativos em tempo real</p>
           </div>
-          <button
-            onClick={handleViewHistory}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-          >
-            Ver Histórico
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {isLoading ? 'Atualizando...' : 'Atualizar'}
+            </button>
+            <button
+              onClick={handleViewHistory}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Ver Histórico
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -334,7 +247,7 @@ const ActiveAuctions: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total de Lances</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {leiloes.reduce((total, leilao) => total + leilao.lances.length, 0)}
+                  {leiloes.reduce((total, leilao) => total + (leilao.lances?.length || 0), 0)}
                 </p>
               </div>
             </div>
@@ -421,13 +334,18 @@ const ActiveAuctions: React.FC = () => {
                     </div>
 
                     {/* Product Image */}
-                    <div className="mb-4">
-                      <img
-                        src={leilao.produto.thumbnail}
-                        alt={leilao.produto.titulo}
-                        className="w-full h-32 object-cover rounded-md"
-                      />
-                    </div>
+                    {leilao.produto?.thumbnail && (
+                      <div className="mb-4">
+                        <img
+                          src={leilao.produto.thumbnail}
+                          alt={leilao.produto.titulo || leilao.titulo}
+                          className="w-full h-32 object-cover rounded-md"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder-image.jpg';
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {/* Price Info */}
                     <div className="space-y-2 mb-4">
@@ -447,7 +365,7 @@ const ActiveAuctions: React.FC = () => {
                     {/* Stats */}
                     <div className="flex justify-between items-center mb-4 text-sm">
                       <div className="text-center">
-                        <div className="font-medium text-gray-900">{leilao.lances.length}</div>
+                        <div className="font-medium text-gray-900">{leilao.lances?.length || 0}</div>
                         <div className="text-gray-600">Lances</div>
                       </div>
                       

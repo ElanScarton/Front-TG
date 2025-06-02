@@ -16,7 +16,7 @@ interface Usuario {
 // Function to fetch all products
 export const getUsuarios = async (): Promise<Usuario[]> => {
   try {
-    const response = await api.get<Usuario[]>('/Usuario');
+    const response = await api.get<Usuario[]>('/Usuarios');
     return response.data;
   } catch (error) {
     console.error("Error fetching products:", error);
