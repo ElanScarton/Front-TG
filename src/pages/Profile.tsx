@@ -38,7 +38,7 @@ const Profile = () => {
           dataCriacao: userData.dataCriacao ? new Date(userData.dataCriacao).toLocaleDateString('pt-BR') : 'Não informado',
           tipoUsuario: userData.tipoUsuario || user?.userType || 0
         };
-        
+        console.log(userData)
         setProfileData(formattedData);
         setOriginalData(formattedData);
       } catch (error) {

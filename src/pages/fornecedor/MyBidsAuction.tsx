@@ -97,10 +97,10 @@ const MyBidsPage: React.FC = () => {
       try {
         // Buscar todos os lances
         const allLances = await getLances();
-        
+        console.log(allLances)
         // Filtrar apenas os lances do usuário atual
-        const myLances = allLances.filter(lance => lance.usuarioId === user.id);
-        
+        const myLances = allLances.filter(lance => lance.usuarioId == user.id);
+        console.log(myLances)
         // Buscar dados dos leilões para cada lance
         const bidsWithAuctions: BidWithAuction[] = [];
         
@@ -503,7 +503,7 @@ const MyBidsPage: React.FC = () => {
 
                   <div className="border-t pt-3 flex space-x-2">
                     <button 
-                      onClick={() => navigate(`/auctions/${bid.leilao.id}`)}
+                      onClick={() => navigate(`/auctions/${bid.leilao.id}/bid`)}
                       className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -515,7 +515,7 @@ const MyBidsPage: React.FC = () => {
                         onClick={() => navigate(`/auctions/${bid.leilao.id}/bid`)}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
                       >
-                        Atualizar Lance
+                        Renovar proposta
                       </button>
                     )}
                   </div>

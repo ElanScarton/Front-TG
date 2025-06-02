@@ -68,16 +68,7 @@ const AuctionMonitorPage: React.FC = () => {
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [selectedWinner, setSelectedWinner] = useState<Lance | null>(null);
 
-  const fetchUsuarios = async () => {
-    try {
-      const usuariosData = await getUsuarios();
-      setUsuarios(usuariosData);
-    } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
-    }
-  };
-
-  const fetchData = async () => {
+  const fetchData = async (usuariosData?: Usuario[]) => {
     if (!id) {
       setError('ID do leilão não fornecido');
       setIsLoading(false);
@@ -86,6 +77,10 @@ const AuctionMonitorPage: React.FC = () => {
 
     try {
       setError(null);
+      
+      // Use os usuários passados como parâmetro ou os do estado
+      const usuariosParaUsar = usuariosData || usuarios;
+      
       const leilaoData = await getLeilaoById(Number(id));
       const statusMap: { [key: number]: 'Ativo' | 'Encerrado' | 'Cancelado' } = {
         0: 'Ativo',
@@ -107,7 +102,7 @@ const AuctionMonitorPage: React.FC = () => {
       const lancesDoLeilao = todosLances
         .filter((lance: any) => lance.leilaoId === Number(id))
         .map((lance: any) => {
-          const usuarioEncontrado = usuarios.find(u => u.id === lance.usuarioId);
+          const usuarioEncontrado = usuariosParaUsar.find(u => u.id === lance.usuarioId);
           return {
             id: lance.id,
             valor: lance.valor,
@@ -135,9 +130,20 @@ const AuctionMonitorPage: React.FC = () => {
 
   useEffect(() => {
     const initializeData = async () => {
-      await fetchUsuarios();
-      await fetchData();
+      try {
+        // Primeiro carrega os usuários
+        const usuariosData = await getUsuarios();
+        setUsuarios(usuariosData);
+        
+        // Depois carrega os dados do leilão passando os usuários como parâmetro
+        await fetchData(usuariosData);
+      } catch (error) {
+        console.error('Erro ao inicializar dados:', error);
+        setError('Erro ao carregar dados iniciais');
+        setIsLoading(false);
+      }
     };
+    
     initializeData();
   }, [id]);
 
@@ -149,7 +155,7 @@ const AuctionMonitorPage: React.FC = () => {
       
       const interval = setInterval(() => {
         console.log('Atualizando dados do leilão...');
-        fetchData();
+        fetchData(); // Aqui usa os usuários já carregados no estado
       }, 30000);
 
       setRefreshInterval(interval);
@@ -306,11 +312,6 @@ const AuctionMonitorPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center p-4 bg-blue-50 rounded-lg">
-            <img 
-              src={leilao.produto.thumbnail} 
-              alt={leilao.produto.titulo} 
-              className="w-20 h-20 object-cover rounded mr-4"
-            />
             <div className="flex-1">
               <h3 className="text-lg font-semibold">{leilao.produto.titulo}</h3>
               <p className="text-gray-600 text-sm">{leilao.produto.descricao}</p>
@@ -386,7 +387,7 @@ const AuctionMonitorPage: React.FC = () => {
               </h2>
               {leilao.status === 'Ativo' && (
                 <button
-                  onClick={fetchData}
+                  onClick={() => fetchData()}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   Atualizar
@@ -492,6 +493,11 @@ const AuctionMonitorPage: React.FC = () => {
             className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Voltar
+          </button>
+          <button
+            className="py-2 px-4 border border-red-300 rounded-md text-sm font-medium text-red-700 hover:bg-red-50"
+          >
+            Finalizar leilão
           </button>
         </div>
         {showWinnerModal && selectedWinner && (

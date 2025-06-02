@@ -50,7 +50,7 @@ export interface UpdateUserData {
 export const registerUser = async (userData: RegisterData): Promise<RegisterResponse> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await api.post<RegisterResponse>('/Usuario', {
+    const response = await api.post<RegisterResponse>('/Usuarios', {
       id: 0, // O ID será gerado pela API
       nome: userData.nome,
       email: userData.email,
@@ -75,7 +75,7 @@ export const registerUser = async (userData: RegisterData): Promise<RegisterResp
 export const getUserById = async (userId: number): Promise<UserData> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await api.get<UserData>(`/Usuario/${userId}`);
+    const response = await api.get<UserData>(`/Usuarios/${userId}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -104,7 +104,7 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
       updatePayload.senha = userData.senha;
     }
 
-    const response = await api.put<UserData>(`/Usuario/${userId}`, updatePayload);
+    const response = await api.put<UserData>(`/Usuarios/${userId}`, updatePayload);
     return response.data;
   } catch (error) {
     console.error('Erro no updateUser:', error);
@@ -149,7 +149,7 @@ export const updateUserAlternative = async (userId: number, userData: UpdateUser
       updatePayload.senha = userData.senha;
     }
 
-    const response = await api.put<UserData>(`/Usuario/${userId}`, updatePayload);
+    const response = await api.put<UserData>(`/Usuarios/${userId}`, updatePayload);
     return response.data;
   } catch (error) {
     console.error('Erro no updateUserAlternative:', error);
@@ -160,7 +160,7 @@ export const updateUserAlternative = async (userId: number, userData: UpdateUser
 // Função para validar senha atual (se a API tiver endpoint específico)
 export const validateCurrentPassword = async (userId: number, password: string): Promise<boolean> => {
   try {
-    const response = await api.post(`/Usuario/${userId}/validate-password`, {
+    const response = await api.post(`/Usuarios/${userId}/validate-password`, {
       senha: password
     });
     return response.data.valid;
