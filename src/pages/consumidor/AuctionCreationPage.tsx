@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProducts } from '../../services/productService';
 import { getUsuarios } from '../../services/usuarioService';
-import { createLeilao } from '../../services/auctionService';
+import { createLeilao, assignSuppliersToAuction } from '../../services/auctionService';
 
 interface Fornecedor {
   id: number;
@@ -244,6 +244,20 @@ const AuctionCreationPage: React.FC = () => {
       const createdLeilao = await createLeilao(leilaoData);
 
       console.log('Leilão criado com sucesso:', createdLeilao);
+
+      // Assign selected suppliers to the auction
+      if (selectedSuppliers.length > 0 && createdLeilao.id) {
+          console.log('Atribuindo fornecedores ao leilão:', selectedSuppliers);
+          try {
+          await assignSuppliersToAuction(createdLeilao.id, selectedSuppliers);
+          console.log('Fornecedores atribuídos com sucesso');
+        } catch (error) {
+          console.error('Erro ao atribuir fornecedores:', error);
+          throw new Error(`Leilão criado, mas falha ao atribuir fornecedores: ${
+            error instanceof Error ? error.message : 'Erro desconhecido'
+          }`);
+        }
+      }
 
       // Show success message
       alert('Pregão criado com sucesso!');

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tally3, Search, Clock, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import { getFornLeiloes, getLeiloes } from '../../services/auctionService';
 
 interface Auction {
   id: string;
@@ -22,6 +22,21 @@ interface Auction {
   };
 }
 
+// Interface para mapear os dados da API
+interface Leilao {
+  id?: number;
+  titulo: string;
+  descricao: string;
+  precoInicial: number;
+  precoFinal: number;
+  dataInicio: string;
+  dataTermino: string;
+  dataEntrega: string;
+  status: number;
+  produtoId: number;
+  usuarioId?: number;
+}
+
 const AuctionListPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -35,66 +50,65 @@ const AuctionListPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Mock data fetch - in a real app, this would be a call to your API
+  // Função para mapear Leilao para Auction
+  const mapLeilaoToAuction = (leilao: Leilao): Auction => {
+    const now = new Date();
+    const startDate = new Date(leilao.dataInicio);
+    const endDate = new Date(leilao.dataTermino);
+    
+    // Determinar status baseado nas datas e status da API
+    let status: 'canceled' | 'active' | 'ending' = 'active';
+    
+    if (leilao.status === 0 || startDate > now) {
+      status = 'active';
+    } else if (endDate <= now || leilao.status === 2) {
+      status = 'ending';
+    } else if (leilao.status === 1) {
+      status = 'canceled';
+    }
+    
+    // Se está terminando em menos de 1 hora, marcar como 'ending'
+    const timeUntilEnd = endDate.getTime() - now.getTime();
+    if (timeUntilEnd > 0 && timeUntilEnd <= 3600000 && status === 'active') { // 1 hora em ms
+      status = 'ending';
+    }
+
+    // Calcular duração em minutos
+    const duration = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+
+    return {
+      id: leilao.id?.toString() || '0',
+      title: leilao.titulo,
+      description: leilao.descricao,
+      maxBudget: leilao.precoFinal || leilao.precoInicial,
+      quantity: 1, // Você pode ajustar isso baseado nos seus dados
+      startDateTime: leilao.dataInicio,
+      duration: duration,
+      thumbnail: '/api/placeholder/300/200', // Placeholder - você pode conectar com uma API de imagens ou usar uma imagem padrão
+      status: status,
+      endTime: leilao.dataTermino,
+      bidsCount: 0, // Você precisará buscar isso de outra API se disponível
+      createdBy: {
+        name: `Usuário ${leilao.usuarioId || 'Desconhecido'}`, // Você pode buscar dados do usuário de outra API
+        rating: 4.0 // Valor padrão - você pode buscar a avaliação real se disponível
+      }
+    };
+  };
+
+  // Buscar leilões da API real
   useEffect(() => {
     const fetchAuctions = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        // In a real app, this would be a call to your API
-        // For now, let's simulate fetching data from dummyjson products and converting them to auctions
-        const response = await axios.get('https://dummyjson.com/products?limit=30');
+        const leiloes = await getFornLeiloes(user?.id);
+        const mappedAuctions = leiloes.map(mapLeilaoToAuction);
         
-        // Transform product data into auction format
-        const mockAuctions: Auction[] = response.data.products.map((product: any, index: number) => {
-          // Generate random times and statuses
-          const now = new Date();
-          let startDateTime = new Date();
-          let endTime = new Date();
-          let status: 'upcoming' | 'active' | 'ending' = 'active';
-          
-          // Distribute auctions between upcoming, active, and ending
-          if (index % 3 === 0) {
-            // Upcoming auction
-            startDateTime = new Date(now.getTime() + 1000 * 60 * 60 * 24); // Tomorrow
-            endTime = new Date(startDateTime.getTime() + 1000 * 60 * 60 * 3); // 3 hours after start
-            status = 'upcoming';
-          } else if (index % 3 === 1) {
-            // Active auction
-            startDateTime = new Date(now.getTime() - 1000 * 60 * 60); // Started 1 hour ago
-            endTime = new Date(now.getTime() + 1000 * 60 * 60 * 5); // Ends in 5 hours
-            status = 'active';
-          } else {
-            // Ending soon
-            startDateTime = new Date(now.getTime() - 1000 * 60 * 60 * 5); // Started 5 hours ago
-            endTime = new Date(now.getTime() + 1000 * 60 * 30); // Ends in 30 minutes
-            status = 'ending';
-          }
-
-          return {
-            id: product.id.toString(),
-            title: product.title,
-            description: product.description,
-            maxBudget: product.price * 1.2, // Set max budget slightly higher than product price
-            quantity: Math.floor(Math.random() * 10) + 1, // Random quantity 1-10
-            startDateTime: startDateTime.toISOString(),
-            duration: Math.floor(Math.random() * 180) + 60, // Random duration 60-240 minutes
-            thumbnail: product.thumbnail,
-            status: status,
-            endTime: endTime.toISOString(),
-            bidsCount: Math.floor(Math.random() * 15), // Random number of bids
-            createdBy: {
-              name: `Cliente ${index + 1}`,
-              rating: (3 + Math.random() * 2).toFixed(1) // Rating between 3 and 5
-            }
-          };
-        });
-
-        setAuctions(mockAuctions);
-        setFilteredAuctions(mockAuctions);
+        setAuctions(mappedAuctions);
+        setFilteredAuctions(mappedAuctions);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        setError(err instanceof Error ? err.message : 'Erro desconhecido ao carregar os pregões');
         console.error('Error fetching auctions:', err);
       } finally {
         setIsLoading(false);
@@ -183,26 +197,26 @@ const AuctionListPage: React.FC = () => {
   };
 
   // Get status badge color
-  const getStatusBadgeColor = (status: 'upcoming' | 'active' | 'ending') => {
+  const getStatusBadgeColor = (status: 'canceled' | 'active' | 'ending') => {
     switch (status) {
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800';
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'ending':
         return 'bg-orange-100 text-orange-800';
+      case 'canceled':
+        return 'bg-red-100 text-red-800';
     }
   };
 
   // Get status text
-  const getStatusText = (status: 'upcoming' | 'active' | 'ending') => {
+  const getStatusText = (status: 'canceled' | 'active' | 'ending') => {
     switch (status) {
-      case 'upcoming':
-        return 'Em breve';
       case 'active':
-        return 'Ativo';
+        return 'Em andamento';
       case 'ending':
-        return 'Terminando';
+        return 'Finalizado';
+      case 'canceled':
+        return 'Cancelado';
     }
   };
 
@@ -316,7 +330,11 @@ const AuctionListPage: React.FC = () => {
                   <img 
                     src={auction.thumbnail} 
                     alt={auction.title} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover bg-gray-200"
+                    onError={(e) => {
+                      // Fallback para quando a imagem não carregar
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjUgMTAwSDg3LjVMMTMxLjI1IDQ2LjI1TDE1MCA3MEwxNzUgMzVMMjEyLjUgMTAwSDE3NSIgZmlsbD0iI0Q1RDlERCIvPgo8Y2lyY2xlIGN4PSIxMzEuMjUiIGN5PSI2Ni4yNSIgcj0iMTEuMjUiIGZpbGw9IiNEMzMxODEiLz4KPC9zdmc+';
+                    }}
                   />
                   <div className="absolute top-2 right-2">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(auction.status)}`}>

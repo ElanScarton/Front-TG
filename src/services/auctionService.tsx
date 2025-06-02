@@ -6,9 +6,11 @@ interface Leilao {
   titulo: string;
   descricao: string;
   precoInicial: number;
+  precoFinal: number;
   dataInicio: string;
   dataTermino: string;
   dataEntrega: string;
+  status: number;
   produtoId: number;
   usuarioId?: number;
 }
@@ -58,7 +60,7 @@ export const createLeilao = async (leilaoData: Leilao): Promise<Leilao> => {
 // Function to update a leilao by id
 export const updateLeilao = async (id: number, leilaoData: Leilao): Promise<Leilao> => {
   try {
-    const response = await api.put<Leilao>(`/api/Leiloes/${id}`, {
+    const response = await api.put<Leilao>(`/Leiloes/${id}`, {
       titulo: leilaoData.titulo,
       descricao: leilaoData.descricao,
       precoInicial: leilaoData.precoInicial,
@@ -76,9 +78,39 @@ export const updateLeilao = async (id: number, leilaoData: Leilao): Promise<Leil
 // Function to delete a leilao by id
 export const deleteLeilao = async (id: number): Promise<void> => {
   try {
-    await api.delete(`/api/Leiloes/${id}`);
+    await api.delete(`/Leiloes/${id}`);
   } catch (error) {
     console.error("Error deleting leilao:", error);
+    throw error;
+  }
+};
+
+export const getFornLeiloes = async (id: number): Promise<Leilao[]> => {
+  try {
+    const response = await api.get<Leilao[]>(`/Leiloes/fornecedor/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching leiloes:", error);
+    throw error;
+  }
+};
+
+// Function to assign suppliers to an auction
+export const assignSuppliersToAuction = async (leilaoId: number, fornecedoresIds: number[]) => {
+  console.log('Enviando para API - leilaoId:', leilaoId, 'fornecedoresIds:', fornecedoresIds);
+  
+  try {
+    const response = await api.patch(`/leiloes/${leilaoId}/fornecedores`, {
+      usuariosIds: fornecedoresIds
+    });
+    console.log('Resposta da API:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Detalhes do erro:', {
+      request: error.config,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     throw error;
   }
 };

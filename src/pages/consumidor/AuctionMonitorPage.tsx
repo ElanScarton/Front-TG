@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getLeilaoById } from '../../services/auctionService';
+import { getLances, updateVencedor } from '../../services/lanceService';
+import { getUsuarios } from '../../services/usuarioService';
 
 interface Usuario {
   id: number;
   nome: string;
   email: string;
+  tipoUsuario?: string;
+  cpf?: string;
+  cnpj?: string;
+  ativo?: boolean;
+  dataCriacao?: string;
 }
 
 interface Produto {
@@ -36,7 +44,7 @@ interface Leilao {
   dataInicio: string;
   dataTermino: string;
   dataEntrega: string;
-  status: 'Rascunho' | 'Publicado' | 'EmAndamento' | 'Finalizado' | 'Cancelado';
+  status: 'Ativo' | 'Encerrado' | 'Cancelado';
   produtoId: number;
   usuarioId: number;
   dataCriacao: string;
@@ -51,127 +59,124 @@ const AuctionMonitorPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // State management
   const [leilao, setLeilao] = useState<Leilao | null>(null);
+  const [lances, setLances] = useState<Lance[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [selectedWinner, setSelectedWinner] = useState<Lance | null>(null);
 
-  // Mock data - Replace with actual API calls
-  const mockLeilao: Leilao = {
-    id: 1,
-    titulo: 'iPhone 9',
-    descricao: 'An apple mobile which is nothing like apple',
-    precoInicial: 549.00,
-    precoFinal: null,
-    dataInicio: '2024-01-15T10:00:00',
-    dataTermino: '2024-01-15T18:00:00',
-    dataEntrega: '2024-01-20T09:00:00',
-    status: 'EmAndamento',
-    produtoId: 1,
-    usuarioId: 1,
-    dataCriacao: '2024-01-14T15:30:00',
-    dataAtualizacao: '2024-01-15T16:45:00',
-    produto: {
-      id: 1,
-      titulo: 'iPhone 9',
-      descricao: 'An apple mobile which is nothing like apple',
-      preco: 549.00,
-      thumbnail: 'https://cdn.dummyjson.com/product-images/1/thumbnail.jpg'
-    },
-    usuario: {
-      id: 1,
-      nome: 'João Silva',
-      email: 'joao@empresa.com'
-    },
-    lances: [
-      {
-        id: 1,
-        valor: 520.00,
-        vencedor: false,
-        observacao: 'Primeira oferta',
-        usuarioId: 2,
-        leilaoId: 1,
-        dataCriacao: '2024-01-15T10:15:00',
-        usuario: { id: 2, nome: 'TechSupply Inc.', email: 'contato@techsupply.com' }
-      },
-      {
-        id: 2,
-        valor: 510.00,
-        vencedor: false,
-        observacao: 'Melhor oferta disponível',
-        usuarioId: 3,
-        leilaoId: 1,
-        dataCriacao: '2024-01-15T11:30:00',
-        usuario: { id: 3, nome: 'Global Electronics', email: 'vendas@global.com' }
-      },
-      {
-        id: 3,
-        valor: 495.00,
-        vencedor: false,
-        observacao: 'Oferta competitiva',
-        usuarioId: 4,
-        leilaoId: 1,
-        dataCriacao: '2024-01-15T13:45:00',
-        usuario: { id: 4, nome: 'Digital Solutions', email: 'propostas@digital.com' }
-      },
-      {
-        id: 4,
-        valor: 480.00,
-        vencedor: false,
-        observacao: 'Última oferta',
-        usuarioId: 5,
-        leilaoId: 1,
-        dataCriacao: '2024-01-15T16:20:00',
-        usuario: { id: 5, nome: 'Office Depot', email: 'licitacoes@office.com' }
-      }
-    ]
+  const fetchUsuarios = async () => {
+    try {
+      const usuariosData = await getUsuarios();
+      setUsuarios(usuariosData);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+    }
   };
 
-  // Fetch auction data
-  useEffect(() => {
-    const fetchLeilao = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Replace with actual API call
-        // const response = await fetch(`/api/leiloes/${id}`);
-        // const data = await response.json();
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setLeilao(mockLeilao);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar leilão');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchLeilao();
+  const fetchData = async () => {
+    if (!id) {
+      setError('ID do leilão não fornecido');
+      setIsLoading(false);
+      return;
     }
+
+    try {
+      setError(null);
+      const leilaoData = await getLeilaoById(Number(id));
+      const statusMap: { [key: number]: 'Ativo' | 'Encerrado' | 'Cancelado' } = {
+        0: 'Ativo',
+        1: 'Encerrado',
+        2: 'Cancelado'
+      };
+      
+      const mappedLeilao: Leilao = {
+        ...leilaoData,
+        status: statusMap[leilaoData.status] || 'Ativo',
+        lances: [],
+        produto: leilaoData.produto || { id: 0, titulo: '', descricao: '', preco: 0, thumbnail: '' },
+        usuario: leilaoData.usuario || { id: 0, nome: '', email: '' }
+      };
+      
+      setLeilao(mappedLeilao);
+
+      const todosLances = await getLances();
+      const lancesDoLeilao = todosLances
+        .filter((lance: any) => lance.leilaoId === Number(id))
+        .map((lance: any) => {
+          const usuarioEncontrado = usuarios.find(u => u.id === lance.usuarioId);
+          return {
+            id: lance.id,
+            valor: lance.valor,
+            vencedor: lance.vencedor || false,
+            observacao: lance.observacao,
+            usuarioId: lance.usuarioId,
+            leilaoId: lance.leilaoId,
+            dataCriacao: lance.dataCriacao,
+            usuario: usuarioEncontrado || lance.usuario || { 
+              id: lance.usuarioId, 
+              nome: 'Nome não disponível', 
+              email: 'Email não disponível' 
+            }
+          };
+        });
+      
+      setLances(lancesDoLeilao);
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao carregar dados do leilão');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeData = async () => {
+      await fetchUsuarios();
+      await fetchData();
+    };
+    initializeData();
   }, [id]);
 
-  // Auto-refresh data for active auctions
   useEffect(() => {
-    if (leilao?.status === 'EmAndamento') {
+    if (leilao?.status === 'Ativo') {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+      
       const interval = setInterval(() => {
-        // Refresh auction data
-        console.log('Refreshing auction data...');
-      }, 30000); // Refresh every 30 seconds
+        console.log('Atualizando dados do leilão...');
+        fetchData();
+      }, 30000);
 
       setRefreshInterval(interval);
-      return () => clearInterval(interval);
+      
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    } else {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        setRefreshInterval(null);
+      }
     }
   }, [leilao?.status]);
 
-  // Calculate statistics
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, []);
+
   const getAuctionStats = () => {
-    if (!leilao || !leilao.lances.length) {
+    if (!lances.length) {
       return {
         totalLances: 0,
         menorLance: 0,
@@ -182,15 +187,15 @@ const AuctionMonitorPage: React.FC = () => {
       };
     }
 
-    const valores = leilao.lances.map(lance => lance.valor);
+    const valores = lances.map(lance => lance.valor);
     const menorLance = Math.min(...valores);
     const maiorLance = Math.max(...valores);
     const lanceMedia = valores.reduce((acc, val) => acc + val, 0) / valores.length;
-    const economia = leilao.precoInicial - menorLance;
-    const economiaPercentual = (economia / leilao.precoInicial) * 100;
+    const economia = leilao ? leilao.precoInicial - menorLance : 0;
+    const economiaPercentual = leilao ? (economia / leilao.precoInicial) * 100 : 0;
 
     return {
-      totalLances: leilao.lances.length,
+      totalLances: lances.length,
       menorLance,
       maiorLance,
       lanceMedia,
@@ -201,19 +206,15 @@ const AuctionMonitorPage: React.FC = () => {
 
   const stats = getAuctionStats();
 
-  // Get auction status info
   const getStatusInfo = (status: string) => {
     const statusMap = {
-      'Rascunho': { color: 'bg-gray-100 text-gray-800', label: 'Rascunho' },
-      'Publicado': { color: 'bg-blue-100 text-blue-800', label: 'Publicado' },
-      'EmAndamento': { color: 'bg-green-100 text-green-800', label: 'Em Andamento' },
-      'Finalizado': { color: 'bg-purple-100 text-purple-800', label: 'Finalizado' },
+      'Ativo': { color: 'bg-green-100 text-green-800', label: 'Ativo' },
+      'Encerrado': { color: 'bg-purple-100 text-purple-800', label: 'Encerrado' },
       'Cancelado': { color: 'bg-red-100 text-red-800', label: 'Cancelado' }
     };
-    return statusMap[status as keyof typeof statusMap] || statusMap['Rascunho'];
+    return statusMap[status as keyof typeof statusMap] || statusMap['Ativo'];
   };
 
-  // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -221,44 +222,38 @@ const AuctionMonitorPage: React.FC = () => {
     }).format(value);
   };
 
-  // Format date
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
-  // Handle winner selection
   const handleSelectWinner = (lance: Lance) => {
     setSelectedWinner(lance);
     setShowWinnerModal(true);
   };
 
   const confirmWinner = async () => {
-    if (!selectedWinner) return;
+    if (!selectedWinner || !leilao || !selectedWinner.id) {
+      console.error('Dados incompletos para confirmar vencedor');
+      alert('Erro: Dados incompletos para confirmar vencedor');
+      return;
+    }
 
     try {
-      // API call to set winner
-      console.log('Setting winner:', selectedWinner);
-      
-      // Update local state
-      if (leilao) {
-        const updatedLeilao = {
-          ...leilao,
-          status: 'Finalizado' as const,
-          precoFinal: selectedWinner.valor,
-          lances: leilao.lances.map(lance => ({
-            ...lance,
-            vencedor: lance.id === selectedWinner.id
-          }))
-        };
-        setLeilao(updatedLeilao);
-      }
+      await updateVencedor(selectedWinner.id, true);
+      await fetchData(); // Sincronizar os dados do leilão com o backend
 
+      const updatedLances = lances.map(lance => ({
+        ...lance,
+        vencedor: lance.id === selectedWinner.id
+      }));
+
+      setLances(updatedLances);
       setShowWinnerModal(false);
       setSelectedWinner(null);
       alert('Fornecedor vencedor definido com sucesso!');
     } catch (error) {
-      console.error('Error setting winner:', error);
-      alert('Erro ao definir vencedor');
+      console.error('Erro ao definir vencedor:', error);
+      alert('Erro ao definir vencedor. Tente novamente.');
     }
   };
 
@@ -292,7 +287,6 @@ const AuctionMonitorPage: React.FC = () => {
   return (
     <div className="flex-1 p-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -303,7 +297,7 @@ const AuctionMonitorPage: React.FC = () => {
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>
                 {statusInfo.label}
               </span>
-              {leilao.status === 'EmAndamento' && (
+              {leilao.status === 'Ativo' && (
                 <div className="flex items-center text-green-600">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
                   <span className="text-sm font-medium">Ao Vivo</span>
@@ -311,8 +305,6 @@ const AuctionMonitorPage: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Product Info */}
           <div className="flex items-center p-4 bg-blue-50 rounded-lg">
             <img 
               src={leilao.produto.thumbnail} 
@@ -331,8 +323,6 @@ const AuctionMonitorPage: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
@@ -347,7 +337,6 @@ const AuctionMonitorPage: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-green-100 text-green-600">
@@ -361,7 +350,6 @@ const AuctionMonitorPage: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
@@ -375,7 +363,6 @@ const AuctionMonitorPage: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-purple-100 text-purple-600">
@@ -391,15 +378,15 @@ const AuctionMonitorPage: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Bids Table */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-800">Lances Recebidos</h2>
-              {leilao.status === 'EmAndamento' && (
+              <h2 className="text-xl font-semibold text-gray-800">
+                Lances Recebidos ({lances.length})
+              </h2>
+              {leilao.status === 'Ativo' && (
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={fetchData}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   Atualizar
@@ -407,7 +394,6 @@ const AuctionMonitorPage: React.FC = () => {
               )}
             </div>
           </div>
-
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -427,7 +413,7 @@ const AuctionMonitorPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  {(leilao.status === 'EmAndamento' || leilao.status === 'Finalizado') && (
+                  {(leilao.status === 'Ativo' || leilao.status === 'Encerrado') && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
                     </th>
@@ -435,14 +421,14 @@ const AuctionMonitorPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {leilao.lances.length === 0 ? (
+                {lances.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                       Nenhum lance recebido ainda
                     </td>
                   </tr>
                 ) : (
-                  leilao.lances
+                  lances
                     .sort((a, b) => a.valor - b.valor)
                     .map((lance, index) => (
                       <tr key={lance.id} className={lance.vencedor ? 'bg-green-50' : ''}>
@@ -481,9 +467,9 @@ const AuctionMonitorPage: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        {(leilao.status === 'EmAndamento' || leilao.status === 'Finalizado') && (
+                        {(leilao.status === 'Ativo' || leilao.status === 'Encerrado') && (
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            {!lance.vencedor && leilao.status === 'EmAndamento' && (
+                            {!lance.vencedor && leilao.status === 'Ativo' && (
                               <button
                                 onClick={() => handleSelectWinner(lance)}
                                 className="text-blue-600 hover:text-blue-900"
@@ -500,8 +486,6 @@ const AuctionMonitorPage: React.FC = () => {
             </table>
           </div>
         </div>
-
-        {/* Action Buttons */}
         <div className="mt-6 flex justify-end space-x-3">
           <button
             onClick={() => navigate('/activeauctions')}
@@ -509,73 +493,51 @@ const AuctionMonitorPage: React.FC = () => {
           >
             Voltar
           </button>
-          
-          {leilao.status === 'EmAndamento' && (
-            <button
-              onClick={() => {
-                if (window.confirm('Tem certeza que deseja finalizar este pregão?')) {
-                  // Handle auction finalization
-                  console.log('Finalizing auction...');
-                }
-              }}
-              className="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700"
-            >
-              Finalizar Pregão
-            </button>
-          )}
         </div>
-      </div>
-
-      {/* Winner Selection Modal */}
-      {showWinnerModal && selectedWinner && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Confirmar Vencedor
-              </h3>
-              
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <p className="text-sm text-gray-600">Fornecedor:</p>
-                <p className="font-medium">{selectedWinner.usuario.nome}</p>
-                
-                <p className="text-sm text-gray-600 mt-2">Valor do Lance:</p>
-                <p className="font-medium text-green-600">{formatCurrency(selectedWinner.valor)}</p>
-                
-                {selectedWinner.observacao && (
-                  <>
-                    <p className="text-sm text-gray-600 mt-2">Observação:</p>
-                    <p className="text-sm">{selectedWinner.observacao}</p>
-                  </>
-                )}
-              </div>
-
-              <p className="text-sm text-gray-600 mb-4">
-                Tem certeza que deseja selecionar este fornecedor como vencedor? 
-                Esta ação finalizará o pregão.
-              </p>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowWinnerModal(false);
-                    setSelectedWinner(null);
-                  }}
-                  className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmWinner}
-                  className="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700"
-                >
+        {showWinnerModal && selectedWinner && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Confirmar Vencedor
-                </button>
+                </h3>
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <p className="text-sm text-gray-600">Fornecedor:</p>
+                  <p className="font-medium">{selectedWinner.usuario.nome}</p>
+                  <p className="text-sm text-gray-600 mt-2">Valor do Lance:</p>
+                  <p className="font-medium text-green-600">{formatCurrency(selectedWinner.valor)}</p>
+                  {selectedWinner.observacao && (
+                    <>
+                      <p className="text-sm text-gray-600 mt-2">Observação:</p>
+                      <p className="text-sm">{selectedWinner.observacao}</p>
+                    </>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Tem certeza que deseja selecionar este fornecedor como vencedor?
+                </p>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowWinnerModal(false);
+                      setSelectedWinner(null);
+                    }}
+                    className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmWinner}
+                    className="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Confirmar Vencedor
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

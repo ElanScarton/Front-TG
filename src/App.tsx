@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import AuctionMonitorPage from "./pages/consumidor/AuctionMonitorPage";
 import ActiveAuctions from "./pages/consumidor/ActiveAuctionsPage";
 import AuctionHistory from "./pages/consumidor/HistoryAuctionsPage";
+import MyBidsPage from "./pages/fornecedor/MyBidsAuction";
 
 export default function App() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -175,6 +176,19 @@ export default function App() {
             <div className="flex h-screen">
               <div className="rounded w-full flex justify-between flex-wrap">
                 <AuctionBidPage />
+              </div>
+              <div>
+                <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />
+              </div>
+            </div>
+          }
+        />
+        <Route
+          path="/my-bids"
+          element={
+            <div className="flex h-screen">
+              <div className="rounded w-full flex justify-between flex-wrap">
+                <MyBidsPage />
               </div>
               <div>
                 <SidebarNav onToggle={handleSidebarToggle} forceCollapsed={forceCollapsed} />

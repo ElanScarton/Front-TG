@@ -1,16 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Upload, Users, DollarSign, Calendar, ChevronLeft, Info, AlertTriangle } from 'lucide-react';
-import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getLeilaoById } from '../../services/auctionService';
+import { createLance } from '../../services/lanceService';
+
+// Interfaces
+interface Leilao {
+  id?: number;
+  titulo: string;
+  descricao: string;
+  precoInicial: number;
+  precoFinal: number | null;
+  dataInicio: string;
+  dataTermino: string;
+  dataEntrega: string;
+  status: number;
+  produtoId: number;
+  usuarioId?: number;
+  dataCriacao?: string;
+  dataAtualizacao?: string;
+}
+
+interface Lance {
+  id?: number;
+  valor: number;
+  vencedor?: boolean;
+  observacao?: string;
+  usuarioId: number;
+  leilaoId: number;
+  dataCriacao?: string;
+}
 
 const AuctionBidPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   // States
-  const [auction, setAuction] = useState(null);
+  const [auction, setAuction] = useState<Leilao | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [bidValue, setBidValue] = useState('');
   const [deliveryDate, setDeliveryDate] = useState(() => {
     // Default delivery date: 7 days from now
@@ -19,56 +47,39 @@ const AuctionBidPage = () => {
     return date.toISOString().split('T')[0];
   });
   const [description, setDescription] = useState('');
-  const [fileNames, setFileNames] = useState([]);
+  const [fileNames, setFileNames] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState('');
   const [activeTab, setActiveTab] = useState('auction');
+
+  // Mock user ID - você deve pegar isso do contexto de autenticação
+  const currentUserId = 1; // Substitua pela lógica real de autenticação
 
   // Fetch auction data
   useEffect(() => {
     const fetchAuctionData = async () => {
+      if (!id) {
+        setError('ID do leilão não encontrado');
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        // Fetch the specific product by ID
-        const response = await axios.get(`https://dummyjson.com/products/${id}`);
-        const product = response.data;
-        
-        // Generate auction data based on product
-        const now = new Date();
-        const startDateTime = new Date(now.getTime() - 1000 * 60 * 60); // Started 1 hour ago
-        const endTime = new Date(now.getTime() + 1000 * 60 * 60 * 5); // Ends in 5 hours
-        
-        const auctionData = {
-          id: product.id.toString(),
-          title: product.title,
-          description: product.description,
-          maxBudget: Math.round(product.price * 1.2 * 100) / 100, // Set max budget slightly higher than product price
-          quantity: Math.floor(Math.random() * 10) + 1, // Random quantity 1-10
-          startDateTime: startDateTime.toISOString(),
-          endTime: endTime.toISOString(),
-          thumbnail: product.thumbnail,
-          status: 'active',
-          bidsCount: Math.floor(Math.random() * 15), // Random number of bids
-          createdBy: {
-            name: `Cliente ${Math.floor(Math.random() * 100)}`,
-            rating: (3 + Math.random() * 2).toFixed(1) // Rating between 3 and 5
-          }
-        };
-        
-        setAuction(auctionData);
+        const leilaoData = await getLeilaoById(parseInt(id));
+        console.log('dados recebidos: ', leilaoData )
+        setAuction(leilaoData);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching auction:', err);
-        setError(err instanceof Error ? err.message : 'Ocorreu um erro ao carregar os dados do pregão');
+        setError(err instanceof Error ? err.message : 'Ocorreu um erro ao carregar os dados do leilão');
         setLoading(false);
       }
     };
 
-    if (id) {
-      fetchAuctionData();
-    }
+    fetchAuctionData();
   }, [id]);
 
   // Update time remaining every second
@@ -76,7 +87,7 @@ const AuctionBidPage = () => {
     if (!auction) return;
     
     const interval = setInterval(() => {
-      const end = new Date(auction.endTime);
+      const end = new Date(auction.dataTermino);
       const now = new Date();
       const diffMs = end.getTime() - now.getTime();
       
@@ -98,49 +109,92 @@ const AuctionBidPage = () => {
 
   // Handlers
   const handleFileSelection = () => {
-    // Simulate adding files
+    // Simulate adding files - você pode implementar upload real aqui
     const mockFiles = ['especificacao_tecnica.pdf', 'catalogo_produtos.pdf', 'certificado_garantia.jpg'];
     setFileNames(mockFiles);
   };
 
-  const handleRemoveFile = (index) => {
+  const handleRemoveFile = (index: number) => {
     setFileNames(fileNames.filter((_, i) => i !== index));
   };
 
-  const handleSubmitBid = (e) => {
-    e.preventDefault();
+ const handleSubmitBid = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!auction || !id) return;
+  
+  // Validação de campos obrigatórios
+  if (bidValue === '' || !deliveryDate || !description) {
+    setErrorMessage('Por favor, preencha todos os campos obrigatórios.');
+    return;
+  }
+  
+  const bidValueNum = parseFloat(bidValue);
+  
+  // Validação básica do valor
+  if (isNaN(bidValueNum)) {
+    setErrorMessage('Por favor, insira um valor numérico válido.');
+    return;
+  }
+
+  // Validação contra valor zero ou negativo
+  if (bidValueNum <= 0) {
+    setErrorMessage('O valor do lance deve ser maior que zero.');
+    return;
+  }
+
+  // Validação contra preço máximo (se existir)
+  if (auction.precoFinal !== null && bidValueNum > auction.precoFinal) {
+    setErrorMessage(`O valor do lance não pode ser maior que o preço máximo (R$ ${auction.precoFinal.toFixed(2)}).`);
+    return;
+  }
+
+  // Validação contra preço inicial (deve ser menor)
+  if (bidValueNum >= auction.precoInicial) {
+    setErrorMessage(`O valor do lance deve ser menor que o preço inicial (R$ ${auction.precoInicial.toFixed(2)}).`);
+    return;
+  }
+
+  // Validação de diferença mínima (opcional)
+  const MIN_BID_DIFFERENCE = 0.01;
+  if (bidValueNum >= auction.precoInicial - MIN_BID_DIFFERENCE) {
+    setErrorMessage(`O lance deve ser pelo menos R$ ${MIN_BID_DIFFERENCE.toFixed(2)} menor que o preço atual.`);
+    return;
+  }
+  
+  setIsSubmitting(true);
+  setErrorMessage(null);
+  
+  try {
+    const lanceData: Lance = {
+      valor: bidValueNum,
+      observacao: description,
+      usuarioId: currentUserId,
+      leilaoId: parseInt(id),
+      vencedor: false
+    };
+
+    await createLance(lanceData);
     
-    if (!auction) return;
+    setSuccessMessage('Seu lance foi registrado com sucesso!');
     
-    if (bidValue === '' || !deliveryDate || !description) {
-      setErrorMessage('Por favor, preencha todos os campos obrigatórios.');
-      return;
-    }
+    // Reset form
+    setBidValue('');
+    setDescription('');
+    setFileNames([]);
     
-    if (parseFloat(bidValue) > auction.maxBudget) {
-      setErrorMessage(`O valor do lance não pode ser maior que o orçamento máximo (R$ ${auction.maxBudget.toFixed(2)}).`);
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    
-    // Simulate API call with timeout
+    // Redirect after successful submission
     setTimeout(() => {
-      setSuccessMessage('Seu lance foi registrado com sucesso!');
-      setIsSubmitting(false);
-      
-      // Reset form
-      setBidValue('');
-      setDescription('');
-      setFileNames([]);
-      
-      // Redirect after successful submission
-      setTimeout(() => {
-        navigate('/list');
-      }, 3000);
-    }, 1500);
-  };
+      navigate('/list');
+    }, 3000);
+    
+  } catch (err) {
+    console.error('Error submitting bid:', err);
+    setErrorMessage(err instanceof Error ? err.message : 'Erro ao enviar lance. Tente novamente.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Mock navigation
   const navigateBack = () => {
@@ -148,9 +202,43 @@ const AuctionBidPage = () => {
   };
 
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Get status text
+  const getStatusText = (status: number) => {
+    switch (status) {
+      case 0:
+        return 'Em andamento';
+      case 1:
+        return 'Encerrado';
+      case 2:
+        return 'Cancelado';
+      default:
+        return 'Desconhecido';
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status: number) => {
+    switch (status) {
+      case 0:
+        return 'text-green-600';
+      case 1:
+        return 'text-orange-600';
+      case 2:
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  // Check if auction is active
+  const isAuctionActive = () => {
+    if (!auction) return false;
+    return auction.status === 0 && new Date(auction.dataTermino) > new Date();
   };
 
   // Loading state
@@ -173,7 +261,7 @@ const AuctionBidPage = () => {
               className="flex items-center text-black hover:text-blue-800"
             >
               <ChevronLeft className="h-5 w-5 mr-1" />
-              Voltar para a lista de pregões
+              Voltar para a lista de leilões
             </button>
           </div>
           
@@ -181,8 +269,8 @@ const AuctionBidPage = () => {
             <div className="flex">
               <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
               <div>
-                <p className="font-medium">Erro ao carregar o pregão</p>
-                <p>{error || 'O pregão solicitado não foi encontrado.'}</p>
+                <p className="font-medium">Erro ao carregar o leilão</p>
+                <p>{error || 'O leilão solicitado não foi encontrado.'}</p>
                 <button 
                   onClick={() => window.location.reload()}
                   className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
@@ -206,7 +294,7 @@ const AuctionBidPage = () => {
             className="flex items-center text-black hover:text-blue-800"
           >
             <ChevronLeft className="h-5 w-5 mr-1" />
-            Voltar para a lista de pregões
+            Voltar para a lista de leilões
           </button>
         </div>
 
@@ -221,7 +309,7 @@ const AuctionBidPage = () => {
               </div>
               <div>
                 <p className="font-medium">{successMessage}</p>
-                <p className="text-sm">Você será redirecionado para a lista de pregões em instantes.</p>
+                <p className="text-sm">Você será redirecionado para a lista de leilões em instantes.</p>
               </div>
             </div>
           </div>
@@ -232,26 +320,16 @@ const AuctionBidPage = () => {
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col md:flex-row md:justify-between md:items-start">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">{auction.title}</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">{auction.titulo}</h1>
                 <div className="flex items-center text-gray-600 text-sm mb-1">
                   <Users className="h-4 w-4 mr-1" />
-                  <span>Cliente: {auction.createdBy.name}</span>
+                  <span>Leilão ID: {auction.id}</span>
                 </div>
                 <div className="flex items-center text-gray-600 text-sm">
-                  <span className="mr-1">Avaliação:</span>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <svg 
-                        key={i} 
-                        className={`h-4 w-4 ${i < Math.floor(Number(auction.createdBy.rating)) ? 'text-yellow-400' : 'text-gray-300'}`} 
-                        fill="currentColor" 
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                    <span className="ml-1 text-gray-600">{auction.createdBy.rating}</span>
-                  </div>
+                  <span className="mr-2">Status:</span>
+                  <span className={`font-medium ${getStatusColor(auction.status)}`}>
+                    {getStatusText(auction.status)}
+                  </span>
                 </div>
               </div>
               <div className="text-left md:text-right mt-4 md:mt-0">
@@ -260,8 +338,8 @@ const AuctionBidPage = () => {
                   {timeRemaining}
                 </div>
                 <div className="text-gray-600 text-sm">
-                  <p>Iniciado em: {formatDate(auction.startDateTime)}</p>
-                  <p>Término em: {formatDate(auction.endTime)}</p>
+                  <p>Iniciado em: {formatDate(auction.dataInicio)}</p>
+                  <p>Término em: {formatDate(auction.dataTermino)}</p>
                 </div>
               </div>
             </div>
@@ -278,15 +356,16 @@ const AuctionBidPage = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                Detalhes do Pregão
+                Detalhes do Leilão
               </button>
               <button
                 onClick={() => setActiveTab('bid')}
+                disabled={!isAuctionActive()}
                 className={`py-4 px-6 font-medium text-sm border-b-2 ${
                   activeTab === 'bid'
                     ? 'border-blue-500 text-black'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                } ${!isAuctionActive() ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Enviar Lance
               </button>
@@ -299,30 +378,32 @@ const AuctionBidPage = () => {
               <div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <img 
-                      src={auction.thumbnail}
-                      alt={auction.title} 
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
                     
                     <div className="mt-6">
-                      <h3 className="text-lg font-semibold mb-2">Detalhes do Pregão</h3>
+                      <h3 className="text-lg font-semibold mb-2">Detalhes do Leilão</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500 mb-1">Orçamento Máximo</p>
-                          <p className="text-xl font-bold text-black">R$ {auction.maxBudget.toFixed(2)}</p>
+                          <p className="text-sm text-gray-500 mb-1">Preço Inicial</p>
+                          <p className="text-xl font-bold text-black">R$ {auction.precoInicial.toFixed(2)}</p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500 mb-1">Quantidade</p>
-                          <p className="text-xl font-bold">{auction.quantity} unidades</p>
+                          <p className="text-sm text-gray-500 mb-1">Preço Máximo</p>
+                          <p className="text-xl font-bold text-black">
+                            {auction.precoFinal !== null 
+                              ? `R$ ${auction.precoFinal.toFixed(2)}` 
+                              : 'Não definido'
+                            }
+                          </p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500 mb-1">Total de Lances</p>
-                          <p className="text-xl font-bold">{auction.bidsCount}</p>
+                          <p className="text-sm text-gray-500 mb-1">Data de Entrega</p>
+                          <p className="text-lg font-bold">{formatDate(auction.dataEntrega)}</p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <p className="text-sm text-gray-500 mb-1">Status</p>
-                          <p className="text-xl font-bold text-green-600">Ativo</p>
+                          <p className={`text-xl font-bold ${getStatusColor(auction.status)}`}>
+                            {getStatusText(auction.status)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -331,7 +412,7 @@ const AuctionBidPage = () => {
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Descrição</h3>
                     <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                      <p className="text-gray-700">{auction.description}</p>
+                      <p className="text-gray-700">{auction.descricao}</p>
                     </div>
                     
                     <h3 className="text-lg font-semibold mb-3">Informações Adicionais</h3>
@@ -339,22 +420,24 @@ const AuctionBidPage = () => {
                       <div className="flex items-start mb-3">
                         <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <div>
-                          <p className="font-medium">Entrega Estimada</p>
-                          <p className="text-gray-600 text-sm">O cliente espera receber os itens em até 15 dias após o fechamento do pregão.</p>
+                          <p className="font-medium">Entrega Programada</p>
+                          <p className="text-gray-600 text-sm">
+                            Data de entrega: {formatDate(auction.dataEntrega)}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-start mb-3">
                         <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <div>
-                          <p className="font-medium">Garantia</p>
-                          <p className="text-gray-600 text-sm">É necessário oferecer garantia mínima de 90 dias para os produtos.</p>
+                          <p className="font-medium">Produto ID</p>
+                          <p className="text-gray-600 text-sm">Produto relacionado: {auction.produtoId}</p>
                         </div>
                       </div>
                       <div className="flex items-start">
                         <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <div>
                           <p className="font-medium">Pagamento</p>
-                          <p className="text-gray-600 text-sm">O pagamento será realizado em até 30 dias após a entrega e aprovação dos itens.</p>
+                          <p className="text-gray-600 text-sm">O pagamento será realizado conforme acordado após o leilão.</p>
                         </div>
                       </div>
                     </div>
@@ -362,9 +445,14 @@ const AuctionBidPage = () => {
                     <div className="mt-6">
                       <button 
                         onClick={() => setActiveTab('bid')}
-                        className="w-full py-3 px-4 bg-black text-white font-medium rounded-lg hover:bg-blue-700 transition duration-150"
+                        disabled={!isAuctionActive()}
+                        className={`w-full py-3 px-4 font-medium rounded-lg transition duration-150 ${
+                          isAuctionActive()
+                            ? 'bg-black text-white hover:bg-blue-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
                       >
-                        Participar deste Pregão
+                        {isAuctionActive() ? 'Participar deste Leilão' : 'Leilão Indisponível'}
                       </button>
                     </div>
                   </div>
@@ -372,6 +460,19 @@ const AuctionBidPage = () => {
               </div>
             ) : (
               <div>
+                {/* Check if auction is active for bidding */}
+                {!isAuctionActive() && (
+                  <div className="mb-6 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
+                    <div className="flex">
+                      <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
+                      <div>
+                        <p className="font-medium">Leilão não disponível para lances</p>
+                        <p>Este leilão não está ativo ou já foi encerrado.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Bid submission form */}
                 <form onSubmit={handleSubmitBid}>
                   {errorMessage && (
@@ -397,25 +498,53 @@ const AuctionBidPage = () => {
                             type="number"
                             id="bidValue"
                             name="bidValue"
-                            min="0"
+                            min="0.01"
                             step="0.01"
                             required
                             value={bidValue}
                             onChange={(e) => setBidValue(e.target.value)}
-                            className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            disabled={!isAuctionActive()}
+                            className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             placeholder="0,00"
                           />
                           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <span className="text-gray-500 sm:text-sm">BRL</span>
                           </div>
                         </div>
-                        {bidValue && parseFloat(bidValue) > auction.maxBudget && (
+                        
+                        {/* Mensagens de validação */}
+                        {bidValue && parseFloat(bidValue) <= 0 && (
                           <p className="mt-1 text-sm text-red-600">
-                            O valor não pode exceder o orçamento máximo de R$ {auction.maxBudget.toFixed(2)}
+                            O valor do lance deve ser maior que zero.
                           </p>
                         )}
+                        
+                        {bidValue && auction.precoFinal !== null && parseFloat(bidValue) > auction.precoFinal && (
+                          <p className="mt-1 text-sm text-red-600">
+                            O valor não pode exceder o preço máximo de R$ {auction.precoFinal.toFixed(2)}
+                          </p>
+                        )}
+                        
+                        {bidValue && parseFloat(bidValue) >= auction.precoInicial && (
+                          <p className="mt-1 text-sm text-red-600">
+                            O valor deve ser menor que o preço inicial de R$ {auction.precoInicial.toFixed(2)}
+                          </p>
+                        )}
+                        
+                        {bidValue && parseFloat(bidValue) > 0 && 
+                        parseFloat(bidValue) < auction.precoInicial &&
+                        auction.precoFinal !== null && 
+                        parseFloat(bidValue) <= auction.precoFinal && (
+                          <p className="mt-1 text-sm text-green-600">
+                            Lance válido! Você está oferecendo R$ {parseFloat(bidValue).toFixed(2)}
+                          </p>
+                        )}
+                        
                         <p className="mt-1 text-sm text-gray-500">
-                          Orçamento máximo: R$ {auction.maxBudget.toFixed(2)}
+                          Valor inicial: R$ {auction.precoInicial.toFixed(2)}
+                          {auction.precoFinal !== null && (
+                            <> • Valor máximo permitido: R$ {auction.precoFinal.toFixed(2)}</>
+                          )}
                         </p>
                       </div>
                       
@@ -434,7 +563,8 @@ const AuctionBidPage = () => {
                             required
                             value={deliveryDate}
                             onChange={(e) => setDeliveryDate(e.target.value)}
-                            className="block w-full pl-10 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            disabled={!isAuctionActive()}
+                            className="block w-full pl-10 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                           />
                         </div>
                         <p className="mt-1 text-sm text-gray-500">
@@ -450,16 +580,14 @@ const AuctionBidPage = () => {
                           <div className="space-y-1 text-center">
                             <Upload className="mx-auto h-12 w-12 text-gray-400" />
                             <div className="flex text-sm text-gray-600">
-                              <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-black hover:text-blue-500">
-                                <span>Escolher arquivos</span>
-                                <button 
-                                  type="button" 
-                                  onClick={handleFileSelection}
-                                  className="sr-only"
-                                >
-                                  Selecionar arquivos
-                                </button>
-                              </label>
+                              <button
+                                type="button"
+                                onClick={handleFileSelection}
+                                disabled={!isAuctionActive()}
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-black hover:text-blue-500 disabled:cursor-not-allowed disabled:text-gray-400"
+                              >
+                                Escolher arquivos
+                              </button>
                               <p className="pl-1">ou arraste e solte aqui</p>
                             </div>
                             <p className="text-xs text-gray-500">
@@ -479,7 +607,8 @@ const AuctionBidPage = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveFile(index)}
-                                    className="ml-2 text-red-500 hover:text-red-700"
+                                    disabled={!isAuctionActive()}
+                                    className="ml-2 text-red-500 hover:text-red-700 disabled:cursor-not-allowed disabled:text-gray-400"
                                   >
                                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -505,7 +634,8 @@ const AuctionBidPage = () => {
                           required
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
-                          className="block w-full py-3 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          disabled={!isAuctionActive()}
+                          className="block w-full py-3 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                           placeholder="Descreva detalhes sobre os produtos que está oferecendo, incluindo marca, modelo, especificações técnicas, garantia e outras informações relevantes."
                         />
                         <p className="mt-1 text-sm text-gray-500">
@@ -519,7 +649,7 @@ const AuctionBidPage = () => {
                           <div>
                             <h3 className="text-sm font-medium text-yellow-800">Atenção</h3>
                             <div className="mt-2 text-sm text-yellow-700">
-                              <p>Ao submeter seu lance, você concorda com os termos e condições do pregão e confirma que poderá entregar os itens conforme as especificações e no prazo indicado.</p>
+                              <p>Ao submeter seu lance, você concorda com os termos e condições do leilão e confirma que poderá entregar os itens conforme as especificações e no prazo indicado.</p>
                             </div>
                           </div>
                         </div>
@@ -535,8 +665,8 @@ const AuctionBidPage = () => {
                         </button>
                         <button
                           type="submit"
-                          disabled={isSubmitting}
-                          className="px-4 py-2 bg-black text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                          disabled={isSubmitting || !isAuctionActive()}
+                          className="px-4 py-2 bg-black text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                         >
                           {isSubmitting ? (
                             <>
