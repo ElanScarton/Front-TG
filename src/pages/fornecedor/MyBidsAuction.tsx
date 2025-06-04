@@ -83,6 +83,7 @@ const MyBidsPage: React.FC = () => {
       }
     }
     
+    
     return 'ended';
   };
 

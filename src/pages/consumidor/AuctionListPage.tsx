@@ -395,14 +395,14 @@ const AuctionListPage: React.FC = () => {
                     
                     <button 
                       onClick={() => navigate(`/auctions/${auction.id}/bid`)}
-                      disabled={auction.status === 'upcoming'}
+                      disabled={auction.status === 'ending'}
                       className={`w-full py-2 px-4 rounded-md text-center text-white font-medium
-                        ${auction.status === 'upcoming' 
+                        ${auction.status === 'ending' 
                           ? 'bg-gray-300 cursor-not-allowed' 
                           : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                      {auction.status === 'upcoming' 
-                        ? 'Aguarde o início' 
+                      {auction.status === 'ending' 
+                        ? 'Pregão finalizado' 
                         : 'Participar do Pregão'}
                     </button>
                   </div>

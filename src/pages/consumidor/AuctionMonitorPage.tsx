@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { getLeilaoById } from '../../services/auctionService';
+import { ChangeStatusToAuction, getLeilaoById } from '../../services/auctionService';
 import { getLances, updateVencedor } from '../../services/lanceService';
 import { getUsuarios } from '../../services/usuarioService';
 
@@ -63,12 +63,14 @@ const AuctionMonitorPage: React.FC = () => {
   const [lances, setLances] = useState<Lance[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [selectedWinner, setSelectedWinner] = useState<Lance | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [latestLanceId, setLatestLanceId] = useState<number | null>(null);
 
-  const fetchData = async (usuariosData?: Usuario[]) => {
+  const fetchData = useCallback(async (usuariosData?: Usuario[], isManualRefresh: boolean = false) => {
     if (!id) {
       setError('ID do leilão não fornecido');
       setIsLoading(false);
@@ -77,65 +79,67 @@ const AuctionMonitorPage: React.FC = () => {
 
     try {
       setError(null);
-      
-      // Use os usuários passados como parâmetro ou os do estado
+      if (isManualRefresh) setIsRefreshing(true);
+
       const usuariosParaUsar = usuariosData || usuarios;
-      
       const leilaoData = await getLeilaoById(Number(id));
       const statusMap: { [key: number]: 'Ativo' | 'Encerrado' | 'Cancelado' } = {
         0: 'Ativo',
         1: 'Encerrado',
-        2: 'Cancelado'
+        2: 'Cancelado',
       };
-      
+
       const mappedLeilao: Leilao = {
         ...leilaoData,
         status: statusMap[leilaoData.status] || 'Ativo',
         lances: [],
         produto: leilaoData.produto || { id: 0, titulo: '', descricao: '', preco: 0, thumbnail: '' },
-        usuario: leilaoData.usuario || { id: 0, nome: '', email: '' }
+        usuario: leilaoData.usuario || { id: 0, nome: '', email: '' },
       };
-      
-      setLeilao(mappedLeilao);
 
       const todosLances = await getLances();
       const lancesDoLeilao = todosLances
         .filter((lance: any) => lance.leilaoId === Number(id))
-        .map((lance: any) => {
-          const usuarioEncontrado = usuariosParaUsar.find(u => u.id === lance.usuarioId);
-          return {
-            id: lance.id,
-            valor: lance.valor,
-            vencedor: lance.vencedor || false,
-            observacao: lance.observacao,
-            usuarioId: lance.usuarioId,
-            leilaoId: lance.leilaoId,
-            dataCriacao: lance.dataCriacao,
-            usuario: usuarioEncontrado || lance.usuario || { 
-              id: lance.usuarioId, 
-              nome: 'Nome não disponível', 
-              email: 'Email não disponível' 
-            }
-          };
-        });
-      
-      setLances(lancesDoLeilao);
+        .map((lance: any) => ({
+          id: lance.id,
+          valor: lance.valor,
+          vencedor: lance.vencedor || false,
+          observacao: lance.observacao,
+          usuarioId: lance.usuarioId,
+          leilaoId: lance.leilaoId,
+          dataCriacao: lance.dataCriacao,
+          usuario: usuariosParaUsar.find(u => u.id === lance.usuarioId) || lance.usuario || {
+            id: lance.usuarioId,
+            nome: 'Nome não disponível',
+            email: 'Email não disponível',
+          },
+        }));
+
+      // Check if data has changed
+      const hasLeilaoChanged = !lastUpdated || lastUpdated !== leilaoData.dataAtualizacao;
+      const latestLance = lancesDoLeilao.length > 0 ? Math.max(...lancesDoLeilao.map(l => l.id)) : null;
+      const hasLancesChanged = latestLance !== null && latestLance !== latestLanceId;
+
+      if (isManualRefresh || hasLeilaoChanged || hasLancesChanged) {
+        setLeilao(mappedLeilao);
+        setLances(lancesDoLeilao);
+        setLastUpdated(leilaoData.dataAtualizacao);
+        setLatestLanceId(latestLance);
+      }
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar dados do leilão');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [id, usuarios, lastUpdated, latestLanceId]);
 
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // Primeiro carrega os usuários
         const usuariosData = await getUsuarios();
         setUsuarios(usuariosData);
-        
-        // Depois carrega os dados do leilão passando os usuários como parâmetro
         await fetchData(usuariosData);
       } catch (error) {
         console.error('Erro ao inicializar dados:', error);
@@ -143,45 +147,22 @@ const AuctionMonitorPage: React.FC = () => {
         setIsLoading(false);
       }
     };
-    
+
     initializeData();
-  }, [id]);
+  }, [fetchData]);
 
   useEffect(() => {
     if (leilao?.status === 'Ativo') {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-      
-      const interval = setInterval(() => {
-        console.log('Atualizando dados do leilão...');
-        fetchData(); // Aqui usa os usuários já carregados no estado
-      }, 30000);
-
-      setRefreshInterval(interval);
-      
-      return () => {
-        if (interval) {
-          clearInterval(interval);
-        }
+      const checkForUpdates = async () => {
+        await fetchData(undefined, false);
       };
-    } else {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setRefreshInterval(null);
-      }
+
+      const interval = setInterval(checkForUpdates, 30000);
+      return () => clearInterval(interval);
     }
-  }, [leilao?.status]);
+  }, [leilao?.status, fetchData]);
 
-  useEffect(() => {
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
-  }, []);
-
-  const getAuctionStats = () => {
+  const getAuctionStats = useCallback(() => {
     if (!lances.length) {
       return {
         totalLances: 0,
@@ -189,7 +170,7 @@ const AuctionMonitorPage: React.FC = () => {
         maiorLance: 0,
         lanceMedia: 0,
         economia: 0,
-        economiaPercentual: 0
+        economiaPercentual: 0,
       };
     }
 
@@ -206,17 +187,17 @@ const AuctionMonitorPage: React.FC = () => {
       maiorLance,
       lanceMedia,
       economia,
-      economiaPercentual
+      economiaPercentual,
     };
-  };
+  }, [lances, leilao]);
 
   const stats = getAuctionStats();
 
   const getStatusInfo = (status: string) => {
     const statusMap = {
-      'Ativo': { color: 'bg-green-100 text-green-800', label: 'Ativo' },
-      'Encerrado': { color: 'bg-purple-100 text-purple-800', label: 'Encerrado' },
-      'Cancelado': { color: 'bg-red-100 text-red-800', label: 'Cancelado' }
+      Ativo: { color: 'bg-green-100 text-green-800', label: 'Ativo' },
+      Encerrado: { color: 'bg-purple-100 text-purple-800', label: 'Encerrado' },
+      Cancelado: { color: 'bg-red-100 text-red-800', label: 'Cancelado' },
     };
     return statusMap[status as keyof typeof statusMap] || statusMap['Ativo'];
   };
@@ -224,7 +205,7 @@ const AuctionMonitorPage: React.FC = () => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(value);
   };
 
@@ -237,6 +218,16 @@ const AuctionMonitorPage: React.FC = () => {
     setShowWinnerModal(true);
   };
 
+  const handleCancel = async () => {
+    try {
+      await ChangeStatusToAuction(leilao!.id);
+      await fetchData(undefined, true);
+    } catch (error) {
+      console.error('Erro ao finalizar leilão:', error);
+      setError('Erro ao finalizar leilão');
+    }
+  };
+
   const confirmWinner = async () => {
     if (!selectedWinner || !leilao || !selectedWinner.id) {
       console.error('Dados incompletos para confirmar vencedor');
@@ -246,14 +237,7 @@ const AuctionMonitorPage: React.FC = () => {
 
     try {
       await updateVencedor(selectedWinner.id, true);
-      await fetchData(); // Sincronizar os dados do leilão com o backend
-
-      const updatedLances = lances.map(lance => ({
-        ...lance,
-        vencedor: lance.id === selectedWinner.id
-      }));
-
-      setLances(updatedLances);
+      await fetchData(undefined, true);
       setShowWinnerModal(false);
       setSelectedWinner(null);
       alert('Fornecedor vencedor definido com sucesso!');
@@ -277,7 +261,7 @@ const AuctionMonitorPage: React.FC = () => {
         <div className="bg-red-50 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-red-700 mb-2">Erro ao carregar leilão</h2>
           <p className="text-red-600">{error || 'Leilão não encontrado'}</p>
-          <button 
+          <button
             onClick={() => navigate('/auctions')}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
@@ -307,6 +291,12 @@ const AuctionMonitorPage: React.FC = () => {
                 <div className="flex items-center text-green-600">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
                   <span className="text-sm font-medium">Ao Vivo</span>
+                </div>
+              )}
+              {isRefreshing && (
+                <div className="flex items-center text-blue-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+                  <span className="text-sm font-medium">Atualizando...</span>
                 </div>
               )}
             </div>
@@ -387,10 +377,11 @@ const AuctionMonitorPage: React.FC = () => {
               </h2>
               {leilao.status === 'Ativo' && (
                 <button
-                  onClick={() => fetchData()}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  onClick={() => fetchData(undefined, true)}
+                  disabled={isRefreshing}
+                  className={`px-4 py-2 text-sm rounded-md text-white ${isRefreshing ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                 >
-                  Atualizar
+                  {isRefreshing ? 'Atualizando...' : 'Atualizar'}
                 </button>
               )}
             </div>
@@ -495,6 +486,7 @@ const AuctionMonitorPage: React.FC = () => {
             Voltar
           </button>
           <button
+            onClick={handleCancel}
             className="py-2 px-4 border border-red-300 rounded-md text-sm font-medium text-red-700 hover:bg-red-50"
           >
             Finalizar leilão

@@ -281,38 +281,44 @@ const AuctionCreationPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-700">Carregando dados...</h2>
-        </div>
-      </div>
+          <div className="flex-1 p-6 bg-gray-100">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md"></div>
+              <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black mx-auto mb-4"></div>
+                  <h2 className="text-xl font-semibold text-gray-700">Carregando dados...</h2>
+                </div>
+              </div>
+            </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full mx-4">
-          <div className="text-gray-600 text-6xl text-center mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2 text-center">Erro ao carregar dados</h2>
-          <p className="text-gray-600 text-center mb-6">{error}</p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate('/products')}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-            >
-              Voltar aos Produtos
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Tentar Novamente
-            </button>
-          </div>
-        </div>
-      </div>
+          <div className="flex-1 p-6 bg-gray-100">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md"></div>
+              <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full mx-4">
+                  <div className="text-gray-600 text-6xl text-center mb-4">⚠️</div>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2 text-center">Erro ao carregar dados</h2>
+                  <p className="text-gray-600 text-center mb-6">{error}</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => navigate('/products')}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      Voltar aos Produtos
+                    </button>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                      Tentar Novamente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
     );
   }
 
