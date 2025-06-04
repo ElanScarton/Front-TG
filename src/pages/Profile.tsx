@@ -222,13 +222,13 @@ const Profile = () => {
     const type = String(userType);
     
     switch (type) {
-      case '1':
+      case '0':
       case 'Consumidor':
         return 'Consumidor';
-      case '2':
+      case '1':
       case 'Fornecedor':
         return 'Fornecedor';
-      case '3':
+      case '2':
       case 'Administrador':
         return 'Administrador';
       default:

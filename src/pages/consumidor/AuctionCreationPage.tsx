@@ -49,7 +49,7 @@ const AuctionCreationPage: React.FC = () => {
 
         const usuarios = await getUsuarios();
         const fornecedores: Fornecedor[] = usuarios
-          .filter((usuario: Usuario) => usuario.tipoUsuario === '1') // Assuming '1' is the supplier type
+          .filter((usuario: Usuario) => usuario.tipoUsuario == '1') 
           .map((usuario: Usuario) => ({
             id: usuario.id,
             nome: usuario.nome,
@@ -58,7 +58,6 @@ const AuctionCreationPage: React.FC = () => {
             tipoUsuario: usuario.tipoUsuario,
             ativo: usuario.ativo,
           }));
-
         setSuppliers(fornecedores);
 
         // Pre-fill form with product data
@@ -162,11 +161,6 @@ const AuctionCreationPage: React.FC = () => {
 
     if (auctionData.maxBudget <= 0) {
       alert('Por favor, defina um orçamento máximo válido');
-      return false;
-    }
-
-    if (auctionData.quantity <= 0 || auctionData.quantity > (product?.quantidade || 0)) {
-      alert(`Quantidade deve ser entre 1 e ${product?.quantidade || 0}`);
       return false;
     }
 

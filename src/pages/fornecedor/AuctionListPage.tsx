@@ -44,10 +44,12 @@ const mapLeilaoToAuction = (leilao: Leilao): Auction => {
   // Determinar status baseado nas datas e status da API
   let status: 'upcoming' | 'active' | 'ending' = 'active';
   
-  if (leilao.status === 0 || startDate > now) {
+  if ( startDate > now) {
     status = 'upcoming'; // Alterado de 'active' para 'upcoming' para alinhar com a interface Auction
   } else if (endDate <= now || leilao.status === 2) {
     status = 'ending';
+  }else if (leilao.status === 0) {
+    status = 'active'
   } else if (leilao.status === 1) {
     status = 'ending'; // Mapeia 'canceled' (status 1) para 'ending' ou trate de outra forma
   }

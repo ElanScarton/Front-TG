@@ -2,34 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Search, Clock, AlertCircle, TrendingDown, TrendingUp, Trophy, Eye } from 'lucide-react';
-import { getLances } from '../../services/lanceService';
-import { getLeilaoById } from '../../services/auctionService';
-
-// Interface para os dados do lance
-interface Lance {
-  id?: number;
-  valor: number;
-  vencedor?: boolean;
-  observacao?: string;
-  usuarioId: number;
-  leilaoId: number;
-  dataCriacao?: string;
-}
-
-// Interface para os dados do leilão
-interface Leilao {
-  id?: number;
-  titulo: string;
-  descricao: string;
-  precoInicial: number;
-  precoFinal?: number;
-  dataInicio: string;
-  dataTermino: string;
-  dataEntrega: string;
-  status: number;
-  produtoId: number;
-  usuarioId?: number;
-}
+import { getLances, Lance } from '../../services/lanceService';
+import { getLeilaoById, Leilao } from '../../services/auctionService';
 
 // Interface combinada para exibição
 interface BidWithAuction {
@@ -43,10 +17,10 @@ interface BidWithAuction {
     titulo: string;
     descricao: string;
     precoInicial: number;
-    precoFinal: number;
+    precoFinal?: number;
     dataInicio: string;
     dataTermino: string;
-    status: number;
+    status?: number;
   };
   status: 'active' | 'won' | 'lost' | 'ended';
 }
@@ -82,7 +56,6 @@ const MyBidsPage: React.FC = () => {
         return 'lost';
       }
     }
-    
     
     return 'ended';
   };

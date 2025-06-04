@@ -10,7 +10,7 @@ import AuctionCreationPage from "./pages/consumidor/AuctionCreationPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { UserType } from "./contexts/AuthContext";
 import { useState, useEffect } from "react";
-import AuctionListPage from "./pages/consumidor/AuctionListPage";
+import AuctionListPage from "./pages/fornecedor/AuctionListPage";
 import AuctionBidPage from "./pages/fornecedor/AuctionBidPage";
 import Profile from "./pages/Profile";
 import AuctionMonitorPage from "./pages/consumidor/AuctionMonitorPage";

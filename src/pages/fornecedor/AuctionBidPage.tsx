@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Upload, Users, DollarSign, Calendar, ChevronLeft, Info, AlertTriangle } from 'lucide-react';
+import { Clock, Upload, Users, Calendar, ChevronLeft, Info, AlertTriangle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getLeilaoById, Leilao } from '../../services/auctionService';
 import { createLance, getLances, Lance } from '../../services/lanceService';
@@ -471,11 +471,11 @@ const AuctionBidPage = () => {
                     <div>
                       <div className="mb-5">
                         <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="bidValue">
-                          Valor do Lance (R$) *
+                          Valor do Lance*
                         </label>
                         <div className="relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <DollarSign className="h-5 w-5 text-gray-400" />
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                            R$
                           </div>
                           <input
                             type="number"
@@ -490,9 +490,6 @@ const AuctionBidPage = () => {
                             className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             placeholder="0,00"
                           />
-                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">BRL</span>
-                          </div>
                         </div>
 
                         {bidValue && parseFloat(bidValue) <= 0 && (
@@ -509,10 +506,6 @@ const AuctionBidPage = () => {
                           <p className="mt-1 text-sm text-red-600">
                             O valor deve ser menor que o preço inicial de R$ {auction.precoInicial.toFixed(2)}
                           </p>
-                        )}
-
-                        {bidValue && parseFloat(bidValue) > 0 && parseFloat(bidValue) < auction.precoInicial && (!auction.precoFinal || parseFloat(bidValue) <= auction.precoFinal) && (
-                          <p className="mt-1 text-sm text-green-600">Lance válido! Você está oferecendo R$ {parseFloat(bidValue).toFixed(2)}</p>
                         )}
 
                         <p className="mt-1 text-sm text-gray-500">
