@@ -51,7 +51,7 @@ export default function App() {
           element={
             <div className="flex h-screen">
               <Sidebar />
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <MainContent isExpanded={isExpanded} />
               </div>
               <div>
@@ -65,7 +65,7 @@ export default function App() {
           path="/product/:id"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <ProductPage />
               </div>
               <div>
@@ -79,7 +79,7 @@ export default function App() {
           path="/product/:id/create-auction"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <AuctionCreationPage />
               </div>
               <div>
@@ -93,7 +93,7 @@ export default function App() {
           path="/activeauctions"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <ActiveAuctions />
               </div>
               <div>
@@ -107,7 +107,7 @@ export default function App() {
           path="/auctionMonitorPage/:id"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <AuctionMonitorPage />
               </div>
               <div>
@@ -121,7 +121,7 @@ export default function App() {
           path="/auction-history"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <AuctionHistory />
               </div>
               <div>
@@ -140,7 +140,7 @@ export default function App() {
           path="/register"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <Register />
               </div>
               <div>
@@ -157,7 +157,7 @@ export default function App() {
           path="/list"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <AuctionListPage />
               </div>
               <div>
@@ -174,7 +174,7 @@ export default function App() {
           path="/auctions/:id/bid"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <AuctionBidPage />
               </div>
               <div>
@@ -187,7 +187,7 @@ export default function App() {
           path="/my-bids"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <MyBidsPage />
               </div>
               <div>
@@ -200,7 +200,7 @@ export default function App() {
           path="/settings"
           element={
             <div className="flex h-screen">
-              <div className="rounded w-full flex justify-between flex-wrap">
+              <div className="w-full flex justify-center">
                 <Profile />
               </div>
               <div>

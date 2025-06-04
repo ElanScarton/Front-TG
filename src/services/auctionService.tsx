@@ -114,3 +114,19 @@ export const assignSuppliersToAuction = async (leilaoId: number, fornecedoresIds
     throw error;
   }
 };
+
+export const ChangeStatusToAuction = async (leilaoId: number) => {
+
+  try {
+    const response = await api.patch(`/leiloes/${leilaoId}/cancelar`, {
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Detalhes do erro:', {
+      request: error.config,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw error;
+  }
+};

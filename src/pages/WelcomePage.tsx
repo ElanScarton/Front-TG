@@ -77,7 +77,7 @@ const WelcomePage: React.FC = () => {
         </h1>
 
         <p className="text-xl md:text-2xl text-gray-600 mb-4 max-w-4xl mx-auto">
-          Plataforma completa para leilões reversos automatizados com sistema MRP integrado
+          Plataforma completa para leilões reversos automatizados com a necessidade da sua empresa
         </p>
 
         <p className="text-lg text-gray-500 mb-12 max-w-3xl mx-auto">
@@ -163,10 +163,10 @@ const WelcomePage: React.FC = () => {
 
         <div className="flex flex-col md:flex-row justify-between items-center space-y-8 md:space-y-0 md:space-x-8">
           {[
-            { step: "1", title: "Análise MRP", desc: "Sistema analisa suas necessidades automaticamente" },
+            { step: "1", title: "Análise ERP", desc: "Sistema analisa suas necessidades automaticamente" },
             { step: "2", title: "Sugestão de pregão", desc: "Criação e publicação auxiliada do pregão" },
             { step: "3", title: "Competição", desc: "Fornecedores competem pelos melhores preços" },
-            { step: "4", title: "Seleção IA", desc: "IA seleciona a melhor proposta automaticamente" }
+            { step: "4", title: "Seleção refinada", desc: "Escolhas da aquisição com base em dashboards definidos" }
           ].map((item, index) => (
             <div key={index} className="text-center relative">
               <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold mb-4 mx-auto text-white shadow-lg">
