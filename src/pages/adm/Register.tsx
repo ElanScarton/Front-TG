@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { registerUser, validateCPF, validateCNPJ, formatCPF, formatCNPJ } from '../../services/userService';
 import { UserType } from '../../contexts/AuthContext';
 import axios from 'axios';

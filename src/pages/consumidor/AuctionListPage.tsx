@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tally3, Search, Clock, AlertCircle } from 'lucide-react';
-import { getFornLeiloes, getLeiloes } from '../../services/auctionService';
+import { getFornLeiloes, Leilao } from '../../services/auctionService';
 
 interface Auction {
   id: string;
@@ -22,20 +22,6 @@ interface Auction {
   };
 }
 
-// Interface para mapear os dados da API
-interface Leilao {
-  id?: number;
-  titulo: string;
-  descricao: string;
-  precoInicial: number;
-  precoFinal: number;
-  dataInicio: string;
-  dataTermino: string;
-  dataEntrega: string;
-  status: number;
-  produtoId: number;
-  usuarioId?: number;
-}
 
 const AuctionListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,50 +36,49 @@ const AuctionListPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Função para mapear Leilao para Auction
-  const mapLeilaoToAuction = (leilao: Leilao): Auction => {
-    const now = new Date();
-    const startDate = new Date(leilao.dataInicio);
-    const endDate = new Date(leilao.dataTermino);
-    
-    // Determinar status baseado nas datas e status da API
-    let status: 'canceled' | 'active' | 'ending' = 'active';
-    
-    if (leilao.status === 0 || startDate > now) {
-      status = 'active';
-    } else if (endDate <= now || leilao.status === 2) {
-      status = 'ending';
-    } else if (leilao.status === 1) {
-      status = 'canceled';
-    }
-    
-    // Se está terminando em menos de 1 hora, marcar como 'ending'
-    const timeUntilEnd = endDate.getTime() - now.getTime();
-    if (timeUntilEnd > 0 && timeUntilEnd <= 3600000 && status === 'active') { // 1 hora em ms
-      status = 'ending';
-    }
+const mapLeilaoToAuction = (leilao: Leilao): Auction => {
+  const now = new Date();
+  const startDate = new Date(leilao.dataInicio);
+  const endDate = new Date(leilao.dataTermino);
+  
+  // Determinar status baseado nas datas e status da API
+  let status: 'upcoming' | 'active' | 'ending' = 'active';
+  
+  if (leilao.status === 0 || startDate > now) {
+    status = 'upcoming'; // Alterado de 'active' para 'upcoming' para alinhar com a interface Auction
+  } else if (endDate <= now || leilao.status === 2) {
+    status = 'ending';
+  } else if (leilao.status === 1) {
+    status = 'ending'; // Mapeia 'canceled' (status 1) para 'ending' ou trate de outra forma
+  }
+  
+  // Se está terminando em menos de 1 hora, marcar como 'ending'
+  const timeUntilEnd = endDate.getTime() - now.getTime();
+  if (timeUntilEnd > 0 && timeUntilEnd <= 3600000 && status === 'active') { // 1 hora em ms
+    status = 'ending';
+  }
 
-    // Calcular duração em minutos
-    const duration = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+  // Calcular duração em minutos
+  const duration = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60));
 
-    return {
-      id: leilao.id?.toString() || '0',
-      title: leilao.titulo,
-      description: leilao.descricao,
-      maxBudget: leilao.precoFinal || leilao.precoInicial,
-      quantity: 1, // Você pode ajustar isso baseado nos seus dados
-      startDateTime: leilao.dataInicio,
-      duration: duration,
-      thumbnail: '/api/placeholder/300/200', // Placeholder - você pode conectar com uma API de imagens ou usar uma imagem padrão
-      status: status,
-      endTime: leilao.dataTermino,
-      bidsCount: 0, // Você precisará buscar isso de outra API se disponível
-      createdBy: {
-        name: `Usuário ${leilao.usuarioId || 'Desconhecido'}`, // Você pode buscar dados do usuário de outra API
-        rating: 4.0 // Valor padrão - você pode buscar a avaliação real se disponível
-      }
-    };
+  return {
+    id: leilao.id?.toString() || '0',
+    title: leilao.titulo,
+    description: leilao.descricao,
+    maxBudget: leilao.precoFinal || leilao.precoInicial,
+    quantity: 1, // Ajuste conforme seus dados
+    startDateTime: leilao.dataInicio,
+    duration: duration,
+    thumbnail: '/api/placeholder/300/200', // Placeholder
+    status: status,
+    endTime: leilao.dataTermino,
+    bidsCount: 0, // Ajuste se houver API para lances
+    createdBy: {
+      name: `Usuário ${leilao.usuarioId || 'Desconhecido'}`,
+      rating: 4.0 // Valor padrão
+    }
   };
+};
 
   // Buscar leilões da API real
   useEffect(() => {
@@ -102,7 +87,7 @@ const AuctionListPage: React.FC = () => {
       setError(null);
 
       try {
-        const leiloes = await getFornLeiloes(user?.id);
+        const leiloes = await getFornLeiloes(user!.id);
         const mappedAuctions = leiloes.map(mapLeilaoToAuction);
         
         setAuctions(mappedAuctions);
@@ -196,29 +181,28 @@ const AuctionListPage: React.FC = () => {
     }
   };
 
-  // Get status badge color
-  const getStatusBadgeColor = (status: 'canceled' | 'active' | 'ending') => {
-    switch (status) {
-      case 'active':
-        return 'bg-blue-100 text-blue-800';
-      case 'ending':
-        return 'bg-orange-100 text-orange-800';
-      case 'canceled':
-        return 'bg-red-100 text-red-800';
-    }
-  };
+// Atualize as funções auxiliares:
+const getStatusBadgeColor = (status: 'upcoming' | 'active' | 'ending') => {
+  switch (status) {
+    case 'upcoming':
+      return 'bg-gray-100 text-gray-800'; // Cor para upcoming
+    case 'active':
+      return 'bg-blue-100 text-blue-800';
+    case 'ending':
+      return 'bg-orange-100 text-orange-800';
+  }
+};
 
-  // Get status text
-  const getStatusText = (status: 'canceled' | 'active' | 'ending') => {
-    switch (status) {
-      case 'active':
-        return 'Em andamento';
-      case 'ending':
-        return 'Finalizado';
-      case 'canceled':
-        return 'Cancelado';
-    }
-  };
+const getStatusText = (status: 'upcoming' | 'active' | 'ending') => {
+  switch (status) {
+    case 'upcoming':
+      return 'Em breve';
+    case 'active':
+      return 'Em andamento';
+    case 'ending':
+      return 'Finalizando';
+  }
+};
 
   if (isLoading) {
     return (

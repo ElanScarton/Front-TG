@@ -100,9 +100,9 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     };
 
     // Adiciona nova senha apenas se foi fornecida
-    if (userData.senha && userData.senha.trim() !== '') {
-      updatePayload.senha = userData.senha;
-    }
+   // if (userData.senha && userData.senha.trim() !== '') {
+   //   updatePayload.senha = userData.senha;
+   // }
 
     const response = await api.put<UserData>(`/Usuarios/${userId}`, updatePayload);
     return response.data;
@@ -110,20 +110,20 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     console.error('Erro no updateUser:', error);
     
     // Tratamento específico para diferentes tipos de erro
-    if (error.response?.status === 401) {
-      throw new Error('Senha atual incorreta');
-    } else if (error.response?.status === 400) {
-      const errorMessage = error.response?.data?.message || error.response?.data || 'Dados inválidos';
+   // if (error.response?.status === 401) {
+   //   throw new Error('Senha atual incorreta');
+    //} else if (error.response?.status === 400) {
+     // const errorMessage = error.response?.data?.message || error.response?.data || 'Dados inválidos';
       
       // Verificar se é erro de senha fraca
-      if (errorMessage.includes('senha') || errorMessage.includes('password')) {
-        throw new Error('Senha fraca. Use no mínimo 8 caracteres, com letra maiúscula, minúscula, número e símbolo.');
-      }
+    //  if (errorMessage.includes('senha') || errorMessage.includes('password')) {
+    //    throw new Error('Senha fraca. Use no mínimo 8 caracteres, com letra maiúscula, minúscula, número e símbolo.');
+    //  }
       
-      throw new Error(errorMessage);
-    } else if (error.response?.status === 422) {
-      throw new Error('Dados de entrada inválidos. Verifique as informações fornecidas.');
-    }
+    //  throw new Error(errorMessage);
+    //} else if (error.response?.status === 422) {
+     // throw new Error('Dados de entrada inválidos. Verifique as informações fornecidas.');
+    //}
     
     throw error;
   }
@@ -145,9 +145,9 @@ export const updateUserAlternative = async (userId: number, userData: UpdateUser
     };
 
     // Adiciona nova senha apenas se foi fornecida
-    if (userData.senha && userData.senha.trim() !== '') {
-      updatePayload.senha = userData.senha;
-    }
+    //if (userData.senha && userData.senha.trim() !== '') {
+    //  updatePayload.senha = userData.senha;
+    //}
 
     const response = await api.put<UserData>(`/Usuarios/${userId}`, updatePayload);
     return response.data;
@@ -215,7 +215,7 @@ export const validateCNPJ = (cnpj: string): boolean => {
   // Validação básica dos dígitos verificadores
   let length = cleanCNPJ.length - 2;
   let numbers = cleanCNPJ.substring(0, length);
-  let digits = cleanCNPJ.substring(length);
+  const digits = cleanCNPJ.substring(length);
   let sum = 0;
   let pos = length - 7;
   

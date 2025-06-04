@@ -4,9 +4,15 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getProducts } from "../services/productService";
 import { useNavigate } from "react-router-dom";
 
-const MainContent = ({ isExpanded }) => {
+// Adicione esta interface
+interface MainContentProps {
+isExpanded: boolean;
+}
+
+    const MainContent = ({ isExpanded }: MainContentProps) => {
     const { searchQuery, selectedCategory, minPrice, maxPrice, keyword } = useFilter();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [products, setProducts] = useState<any[]>([]);
     const [filter, setFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);

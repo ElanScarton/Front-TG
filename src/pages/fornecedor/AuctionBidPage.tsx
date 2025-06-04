@@ -1,35 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Upload, Users, DollarSign, Calendar, ChevronLeft, Info, AlertTriangle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getLeilaoById } from '../../services/auctionService';
-import { createLance, getLances } from '../../services/lanceService';
+import { getLeilaoById, Leilao } from '../../services/auctionService';
+import { createLance, getLances, Lance } from '../../services/lanceService';
 import { useAuth } from '../../contexts/AuthContext';
-
-// Interfaces
-interface Leilao {
-  id?: number;
-  titulo: string;
-  descricao: string;
-  precoInicial: number;
-  precoFinal: number | null;
-  dataInicio: string;
-  dataTermino: string;
-  dataEntrega: string;
-  status: number;
-  produtoId: number;
-  usuarioId?: number;
-  dataCriacao?: string;
-  dataAtualizacao?: string;
-}
-
-interface Lance {
-  id?: number;
-  valor: number;
-  observacao?: string;
-  usuarioId: number;
-  leilaoId: number;
-  dataCriacao?: string;
-}
 
 const AuctionBidPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -142,7 +116,7 @@ const AuctionBidPage = () => {
       return;
     }
 
-    if (auction.precoFinal !== null && bidValueNum > auction.precoFinal) {
+    if (auction.precoFinal && bidValueNum > auction.precoFinal) {
       setErrorMessage(`O valor do lance não pode ser maior que o preço máximo (R$ ${auction.precoFinal.toFixed(2)}).`);
       return;
     }
@@ -165,7 +139,7 @@ const AuctionBidPage = () => {
       const lanceData: Lance = {
         valor: bidValueNum,
         observacao: description,
-        usuarioId: user.id,
+        usuarioId: user!.id,
         leilaoId: parseInt(id),
       };
 
@@ -207,7 +181,7 @@ const AuctionBidPage = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const getStatusText = (status: number) => {
+  const getStatusText = (status?: number) => {
     switch (status) {
       case 0:
         return 'Em andamento';
@@ -220,7 +194,7 @@ const AuctionBidPage = () => {
     }
   };
 
-  const getStatusColor = (status: number) => {
+  const getStatusColor = (status?: number) => {
     switch (status) {
       case 0:
         return 'text-green-600';
@@ -370,7 +344,7 @@ const AuctionBidPage = () => {
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <p className="text-sm text-gray-500 mb-1">Preço Máximo</p>
                           <p className="text-xl font-bold text-black">
-                            {auction.precoFinal !== null ? `R$ ${auction.precoFinal.toFixed(2)}` : 'Não definido'}
+                            {auction.precoFinal ? `R$ ${auction.precoFinal.toFixed(2)}` : 'Não definido'}
                           </p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-lg">
@@ -525,7 +499,7 @@ const AuctionBidPage = () => {
                           <p className="mt-1 text-sm text-red-600">O valor do lance deve ser maior que zero.</p>
                         )}
 
-                        {bidValue && auction.precoFinal !== null && parseFloat(bidValue) > auction.precoFinal && (
+                        {bidValue && auction.precoFinal && parseFloat(bidValue) > auction.precoFinal && (
                           <p className="mt-1 text-sm text-red-600">
                             O valor não pode exceder o preço máximo de R$ {auction.precoFinal.toFixed(2)}
                           </p>
@@ -537,13 +511,13 @@ const AuctionBidPage = () => {
                           </p>
                         )}
 
-                        {bidValue && parseFloat(bidValue) > 0 && parseFloat(bidValue) < auction.precoInicial && auction.precoFinal !== null && parseFloat(bidValue) <= auction.precoFinal && (
+                        {bidValue && parseFloat(bidValue) > 0 && parseFloat(bidValue) < auction.precoInicial && (!auction.precoFinal || parseFloat(bidValue) <= auction.precoFinal) && (
                           <p className="mt-1 text-sm text-green-600">Lance válido! Você está oferecendo R$ {parseFloat(bidValue).toFixed(2)}</p>
                         )}
 
                         <p className="mt-1 text-sm text-gray-500">
                           Valor inicial: R$ {auction.precoInicial.toFixed(2)}
-                          {auction.precoFinal !== null && <> • Valor máximo permitido: R$ {auction.precoFinal.toFixed(2)}</>}
+                          {auction.precoFinal && <> • Valor máximo permitido: R$ {auction.precoFinal.toFixed(2)}</>}
                         </p>
                       </div>
 

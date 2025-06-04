@@ -2,7 +2,7 @@ import api from '../data/api'; // Assuming api.ts is in the same directory
 
 // Define an interface for the Product data structure.
 // Adjust this based on the actual structure of your product data.
-interface Product {
+export interface Product {
   id: number;
   nome: string;
   quantidade: number;

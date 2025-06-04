@@ -1,7 +1,7 @@
 import api from '../data/api';
 
 // Define an interface for the Lance data structure
-interface Lance {
+export interface Lance {
   id?: number;
   valor: number;
   vencedor?: boolean;

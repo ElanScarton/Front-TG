@@ -1,57 +1,24 @@
 // ActiveAuctions.tsx - Página para leilões Em Andamento
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getLeiloes } from '../../services/auctionService';
+import { getLeiloes, Leilao } from '../../services/auctionService';
+import { Usuario } from '../../services/usuarioService';
+import { Product } from '../../services/productService';
+import { Lance } from '../../services/lanceService';
 
-interface Usuario {
-  id: number;
-  nome: string;
-  email: string;
+// Interfaces estendidas para dados completos retornados pela API
+interface LeilaoCompleto extends Leilao {
+  lances?: Lance[];
+  produto?: Product;
+  usuario?: Usuario;
 }
 
-interface Produto {
-  id: number;
-  titulo: string;
-  descricao: string;
-  preco: number;
-  thumbnail: string;
-}
-
-interface Lance {
-  id: number;
-  valor: number;
-  vencedor: boolean;
-  observacao?: string;
-  usuarioId: number;
-  leilaoId: number;
-  dataCriacao: string;
-  usuario: Usuario;
-}
-
-interface Leilao {
-  id: number;
-  titulo: string;
-  descricao: string;
-  precoInicial: number;
-  precoFinal?: number;
-  dataInicio: string;
-  dataTermino: string;
-  dataEntrega: string;
-  status: number;
-  produtoId: number;
-  usuarioId: number;
-  dataCriacao: string;
-  dataAtualizacao: string;
-  lances: Lance[];
-  produto: Produto;
-  usuario: Usuario;
-}
 
 const ActiveAuctions: React.FC = () => {
   const navigate = useNavigate();
   
   // State management
-  const [leiloes, setLeiloes] = useState<Leilao[]>([]);
+  const [leiloes, setLeiloes] = useState<LeilaoCompleto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +31,7 @@ const ActiveAuctions: React.FC = () => {
       
       try {
         const data = await getLeiloes();
-        console.log(data)
+        console.log(data);
         
         // Filter only active auctions
         const activeLeiloes = data.filter(leilao => {
@@ -79,9 +46,9 @@ const ActiveAuctions: React.FC = () => {
             return now >= inicio && now <= termino;
           }
         });
-        console.log(activeLeiloes)
+        console.log(activeLeiloes);
 
-        setLeiloes(activeLeiloes);
+        setLeiloes(activeLeiloes as LeilaoCompleto[]);
       } catch (err) {
         console.error('Erro ao buscar leilões:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar leilões');
@@ -121,7 +88,7 @@ const ActiveAuctions: React.FC = () => {
   };
 
   // Get best bid for auction
-  const getBestBid = (lances: Lance[]) => {
+  const getBestBid = (lances?: Lance[]) => {
     if (!lances || lances.length === 0) return null;
     return Math.min(...lances.map(lance => lance.valor));
   };
@@ -131,7 +98,7 @@ const ActiveAuctions: React.FC = () => {
     const searchLower = searchTerm.toLowerCase();
     return leilao.titulo.toLowerCase().includes(searchLower) ||
            leilao.descricao.toLowerCase().includes(searchLower) ||
-           (leilao.produto?.titulo?.toLowerCase().includes(searchLower));
+           (leilao.produto?.nome?.toLowerCase().includes(searchLower));
   });
 
   // Navigate to auction monitor
@@ -152,7 +119,7 @@ const ActiveAuctions: React.FC = () => {
     try {
       const data = await getLeiloes();
       const activeLeiloes = data.filter(leilao => {
-        if (leilao.status) {
+        if (leilao.status !== undefined) {
           return leilao.status === 0;
         } else {
           const now = new Date();
@@ -161,7 +128,7 @@ const ActiveAuctions: React.FC = () => {
           return now >= inicio && now <= termino;
         }
       });
-      setLeiloes(activeLeiloes);
+      setLeiloes(activeLeiloes as LeilaoCompleto[]);
     } catch (err) {
       console.error('Erro ao atualizar leilões:', err);
       setError(err instanceof Error ? err.message : 'Erro ao atualizar leilões');
@@ -333,17 +300,20 @@ const ActiveAuctions: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Product Image */}
-                    {leilao.produto?.thumbnail && (
-                      <div className="mb-4">
-                        <img
-                          src={leilao.produto.thumbnail}
-                          alt={leilao.produto.titulo || leilao.titulo}
-                          className="w-full h-32 object-cover rounded-md"
-                          onError={(e) => {
-                            e.currentTarget.src = '/placeholder-image.jpg';
-                          }}
-                        />
+                    {/* Product Info */}
+                    {leilao.produto && (
+                      <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                        <h4 className="text-sm font-medium text-gray-900 mb-1">
+                          {leilao.produto.nome}
+                        </h4>
+                        <p className="text-xs text-gray-600 mb-1">
+                          Quantidade: {leilao.produto.quantidade}
+                        </p>
+                        {leilao.produto.area && (
+                          <p className="text-xs text-gray-600">
+                            Área: {leilao.produto.area}
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -358,6 +328,13 @@ const ActiveAuctions: React.FC = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Melhor Lance:</span>
                           <span className="font-medium text-green-600">{formatCurrency(bestBid)}</span>
+                        </div>
+                      )}
+
+                      {leilao.precoFinal && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Preço Final:</span>
+                          <span className="font-medium text-blue-600">{formatCurrency(leilao.precoFinal)}</span>
                         </div>
                       )}
                     </div>
@@ -385,9 +362,16 @@ const ActiveAuctions: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Delivery Date */}
+                    <div className="mb-4 text-center">
+                      <div className="text-xs text-gray-500">
+                        Entrega prevista: {formatDateTime(leilao.dataEntrega)}
+                      </div>
+                    </div>
+
                     {/* Action Button */}
                     <button
-                      onClick={() => handleViewAuction(leilao.id)}
+                      onClick={() => leilao.id && handleViewAuction(leilao.id)}
                       className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
                     >
                       Monitorar Pregão

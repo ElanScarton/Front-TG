@@ -1,139 +1,127 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { ChangeStatusToAuction, getLeilaoById } from '../../services/auctionService';
-import { getLances, updateVencedor } from '../../services/lanceService';
-import { getUsuarios } from '../../services/usuarioService';
+import { ChangeStatusToAuction, getLeilaoById, Leilao } from '../../services/auctionService';
+import { getLances, updateVencedor, Lance } from '../../services/lanceService';
+import { getUsuarios, Usuario } from '../../services/usuarioService';
+import { Product } from '../../services/productService';
 
-interface Usuario {
-  id: number;
-  nome: string;
-  email: string;
-  tipoUsuario?: string;
-  cpf?: string;
-  cnpj?: string;
-  ativo?: boolean;
-  dataCriacao?: string;
-}
-
-interface Produto {
-  id: number;
-  titulo: string;
-  descricao: string;
-  preco: number;
-  thumbnail: string;
-}
-
-interface Lance {
-  id: number;
-  valor: number;
-  vencedor: boolean;
-  observacao?: string;
-  usuarioId: number;
-  leilaoId: number;
-  dataCriacao: string;
+// Interface estendida para incluir dados relacionados necessários para a tela
+interface LeilaoExtendido extends Omit<Leilao, 'status'> {
+  status: 'Ativo' | 'Encerrado' | 'Cancelado';
+  lances: LanceExtendido[];
+  produto: Product;
   usuario: Usuario;
 }
 
-interface Leilao {
-  id: number;
-  titulo: string;
-  descricao: string;
-  precoInicial: number;
-  precoFinal?: number;
-  dataInicio: string;
-  dataTermino: string;
-  dataEntrega: string;
-  status: 'Ativo' | 'Encerrado' | 'Cancelado';
-  produtoId: number;
-  usuarioId: number;
-  dataCriacao: string;
-  dataAtualizacao: string;
-  lances: Lance[];
-  produto: Produto;
+interface LanceExtendido extends Lance {
   usuario: Usuario;
 }
 
 const AuctionMonitorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
-  const [leilao, setLeilao] = useState<Leilao | null>(null);
-  const [lances, setLances] = useState<Lance[]>([]);
+  const [leilao, setLeilao] = useState<LeilaoExtendido | null>(null);
+  const [lances, setLances] = useState<LanceExtendido[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
-  const [selectedWinner, setSelectedWinner] = useState<Lance | null>(null);
+  const [selectedWinner, setSelectedWinner] = useState<LanceExtendido | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [latestLanceId, setLatestLanceId] = useState<number | null>(null);
 
-  const fetchData = useCallback(async (usuariosData?: Usuario[], isManualRefresh: boolean = false) => {
-    if (!id) {
-      setError('ID do leilão não fornecido');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setError(null);
-      if (isManualRefresh) setIsRefreshing(true);
-
-      const usuariosParaUsar = usuariosData || usuarios;
-      const leilaoData = await getLeilaoById(Number(id));
-      const statusMap: { [key: number]: 'Ativo' | 'Encerrado' | 'Cancelado' } = {
-        0: 'Ativo',
-        1: 'Encerrado',
-        2: 'Cancelado',
-      };
-
-      const mappedLeilao: Leilao = {
-        ...leilaoData,
-        status: statusMap[leilaoData.status] || 'Ativo',
-        lances: [],
-        produto: leilaoData.produto || { id: 0, titulo: '', descricao: '', preco: 0, thumbnail: '' },
-        usuario: leilaoData.usuario || { id: 0, nome: '', email: '' },
-      };
-
-      const todosLances = await getLances();
-      const lancesDoLeilao = todosLances
-        .filter((lance: any) => lance.leilaoId === Number(id))
-        .map((lance: any) => ({
-          id: lance.id,
-          valor: lance.valor,
-          vencedor: lance.vencedor || false,
-          observacao: lance.observacao,
-          usuarioId: lance.usuarioId,
-          leilaoId: lance.leilaoId,
-          dataCriacao: lance.dataCriacao,
-          usuario: usuariosParaUsar.find(u => u.id === lance.usuarioId) || lance.usuario || {
-            id: lance.usuarioId,
-            nome: 'Nome não disponível',
-            email: 'Email não disponível',
-          },
-        }));
-
-      // Check if data has changed
-      const hasLeilaoChanged = !lastUpdated || lastUpdated !== leilaoData.dataAtualizacao;
-      const latestLance = lancesDoLeilao.length > 0 ? Math.max(...lancesDoLeilao.map(l => l.id)) : null;
-      const hasLancesChanged = latestLance !== null && latestLance !== latestLanceId;
-
-      if (isManualRefresh || hasLeilaoChanged || hasLancesChanged) {
-        setLeilao(mappedLeilao);
-        setLances(lancesDoLeilao);
-        setLastUpdated(leilaoData.dataAtualizacao);
-        setLatestLanceId(latestLance);
+  const fetchData = useCallback(
+    async (usuariosData?: Usuario[], isManualRefresh: boolean = false) => {
+      if (!id) {
+        setError('ID do leilão não fornecido');
+        setIsLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('Erro ao carregar dados:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados do leilão');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [id, usuarios, lastUpdated, latestLanceId]);
+
+      try {
+        setError(null);
+        if (isManualRefresh) setIsRefreshing(true);
+
+        const usuariosParaUsar = usuariosData || usuarios;
+        const leilaoData = await getLeilaoById(Number(id)) as Leilao & { produto: Product; usuario: Usuario };
+
+        // Mapeamento do status numérico para string
+        const statusMap: { [key: number]: 'Ativo' | 'Encerrado' | 'Cancelado' } = {
+          0: 'Ativo',
+          1: 'Encerrado',
+          2: 'Cancelado',
+        };
+
+        const mappedLeilao: LeilaoExtendido = {
+          ...leilaoData,
+          status: statusMap[leilaoData.status || 0] || 'Ativo',
+          lances: [],
+          produto: leilaoData.produto || {
+            id: 0,
+            nome: '',
+            quantidade: 0,
+            valor: 0,
+            descricao: '',
+            area: '',
+            ativo: true,
+            dataCriacao: '',
+            dataAtualizacao: '',
+          },
+          usuario: leilaoData.usuario || {
+            id: 0,
+            nome: '',
+            email: '',
+            tipoUsuario: '',
+            cpf: '',
+            cnpj: '',
+            ativo: true,
+            dataCriacao: '',
+          },
+        };
+
+        const todosLances = await getLances();
+        const lancesDoLeilao = todosLances
+          .filter((lance) => lance.leilaoId === Number(id))
+          .map((lance): LanceExtendido => ({
+            ...lance,
+            usuario:
+              usuariosParaUsar.find((u) => u.id === lance.usuarioId) || {
+                id: lance.usuarioId,
+                nome: 'Nome não disponível',
+                email: 'Email não disponível',
+                tipoUsuario: '',
+                cpf: '',
+                cnpj: '',
+                ativo: true,
+                dataCriacao: '',
+              },
+          }));
+
+        // Verificar se os dados mudaram
+        const hasLeilaoChanged = !lastUpdated || lastUpdated !== leilaoData.dataAtualizacao;
+        const latestLance =
+          lancesDoLeilao.length > 0 ? Math.max(...lancesDoLeilao.map((l) => l.id || 0)) : null;
+        const hasLancesChanged = latestLance !== null && latestLance !== latestLanceId;
+
+        if (isManualRefresh || hasLeilaoChanged || hasLancesChanged) {
+          setLeilao(mappedLeilao);
+          setLances(lancesDoLeilao);
+          setLastUpdated(leilaoData.dataAtualizacao);
+          setLatestLanceId(latestLance);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar dados do leilão');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [id, usuarios, lastUpdated, latestLanceId]
+  );
 
   useEffect(() => {
     const initializeData = async () => {
@@ -174,7 +162,7 @@ const AuctionMonitorPage: React.FC = () => {
       };
     }
 
-    const valores = lances.map(lance => lance.valor);
+    const valores = lances.map((lance) => lance.valor);
     const menorLance = Math.min(...valores);
     const maiorLance = Math.max(...valores);
     const lanceMedia = valores.reduce((acc, val) => acc + val, 0) / valores.length;
@@ -213,15 +201,17 @@ const AuctionMonitorPage: React.FC = () => {
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
-  const handleSelectWinner = (lance: Lance) => {
+  const handleSelectWinner = (lance: LanceExtendido) => {
     setSelectedWinner(lance);
     setShowWinnerModal(true);
   };
 
   const handleCancel = async () => {
     try {
-      await ChangeStatusToAuction(leilao!.id);
-      await fetchData(undefined, true);
+      if (leilao?.id) {
+        await ChangeStatusToAuction(leilao.id);
+        await fetchData(undefined, true);
+      }
     } catch (error) {
       console.error('Erro ao finalizar leilão:', error);
       setError('Erro ao finalizar leilão');
@@ -303,7 +293,7 @@ const AuctionMonitorPage: React.FC = () => {
           </div>
           <div className="flex items-center p-4 bg-blue-50 rounded-lg">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold">{leilao.produto.titulo}</h3>
+              <h3 className="text-lg font-semibold">{leilao.produto.nome}</h3>
               <p className="text-gray-600 text-sm">{leilao.produto.descricao}</p>
               <p className="text-gray-600 text-sm">Preço inicial: {formatCurrency(leilao.precoInicial)}</p>
             </div>
@@ -425,29 +415,21 @@ const AuctionMonitorPage: React.FC = () => {
                     .map((lance, index) => (
                       <tr key={lance.id} className={lance.vencedor ? 'bg-green-50' : ''}>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {lance.usuario.nome}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {lance.usuario.email}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900">{lance.usuario.nome}</div>
+                          <div className="text-sm text-gray-500">{lance.usuario.email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {formatCurrency(lance.valor)}
                           </div>
                           {index === 0 && (
-                            <div className="text-xs text-green-600 font-medium">
-                              Melhor oferta
-                            </div>
+                            <div className="text-xs text-green-600 font-medium">Melhor oferta</div>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDateTime(lance.dataCriacao)}
+                          {formatDateTime(lance.dataCriacao || '')}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {lance.observacao || '-'}
-                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{lance.observacao || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {lance.vencedor ? (
                             <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
@@ -496,9 +478,7 @@ const AuctionMonitorPage: React.FC = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Confirmar Vencedor
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Confirmar Vencedor</h3>
                 <div className="bg-gray-50 p-4 rounded-md mb-4">
                   <p className="text-sm text-gray-600">Fornecedor:</p>
                   <p className="font-medium">{selectedWinner.usuario.nome}</p>

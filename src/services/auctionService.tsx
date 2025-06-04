@@ -1,16 +1,17 @@
 import api from '../data/api';
 
 // Define an interface for the Leilao data structure
-interface Leilao {
+export interface Leilao {
+  dataAtualizacao: string;
   id?: number;
   titulo: string;
   descricao: string;
   precoInicial: number;
-  precoFinal: number;
+  precoFinal?: number;
   dataInicio: string;
   dataTermino: string;
   dataEntrega: string;
-  status: number;
+  status?: number;
   produtoId: number;
   usuarioId?: number;
 }
@@ -104,16 +105,11 @@ export const assignSuppliersToAuction = async (leilaoId: number, fornecedoresIds
       usuariosIds: fornecedoresIds
     });
     console.log('Resposta da API:', response.data);
-    return response.data;
   } catch (error) {
-    console.error('Detalhes do erro:', {
-      request: error.config,
-      response: error.response?.data,
-      status: error.response?.status
-    });
+    console.error("Error fetching leiloes:", error);
     throw error;
-  }
-};
+    }};
+
 
 export const ChangeStatusToAuction = async (leilaoId: number) => {
 
@@ -122,11 +118,6 @@ export const ChangeStatusToAuction = async (leilaoId: number) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Detalhes do erro:', {
-      request: error.config,
-      response: error.response?.data,
-      status: error.response?.status
-    });
+    console.error("Error fetching leiloes:", error);
     throw error;
-  }
-};
+    }};

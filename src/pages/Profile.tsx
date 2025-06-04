@@ -1,7 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { User, Edit3, Save, X, LogOut, Calendar, Mail, Hash, FileText, Building, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserById, updateUser } from '../services/userService';
+
+// Interface para os dados do formulário (inclui campos de senha que não estão na interface Usuario)
+interface ProfileFormData {
+  nome: string;
+  email: string;
+  cpf: string;
+  cnpj: string;
+  senha: string;
+  confirmSenha: string;
+  dataCriacao: string;
+  tipoUsuario: string | number;
+}
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -9,7 +22,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<ProfileFormData>({
     nome: '',
     email: '',
     cpf: '',
@@ -17,18 +30,18 @@ const Profile = () => {
     senha: '',
     confirmSenha: '',
     dataCriacao: '',
-    tipoUsuario: 0
+    tipoUsuario: ''
   });
-  const [originalData, setOriginalData] = useState({});
+  const [originalData, setOriginalData] = useState<ProfileFormData>({} as ProfileFormData);
 
   // Carregar dados do perfil do usuário
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
         setLoading(true);
-        const userData = await getUserById(user?.id);
+        const userData = await getUserById(user!.id);
         
-        const formattedData = {
+        const formattedData: ProfileFormData = {
           nome: userData.nome || user?.nome || '',
           email: userData.email || user?.email || '',
           cpf: userData.cpf || '',
@@ -42,7 +55,7 @@ const Profile = () => {
         setOriginalData(formattedData);
       } catch (error) {
         console.error('Erro ao carregar perfil:', error);
-        const fallbackData = {
+        const fallbackData: ProfileFormData = {
           nome: user?.nome || '',
           email: user?.email || '',
           cpf: '',
@@ -64,14 +77,14 @@ const Profile = () => {
     }
   }, [user]);
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setProfileData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const getPasswordStrength = (password) => {
+  const getPasswordStrength = (password: string) => {
     if (!password) return { score: 0, text: '', color: '' };
     
     let score = 0;
@@ -90,7 +103,7 @@ const Profile = () => {
     return { score, text: 'Forte', color: 'text-green-500' };
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = (password: string): string | null => {
     const minLength = 8;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
@@ -142,7 +155,7 @@ const Profile = () => {
     try {
       setLoading(true);
       
-      const updateData = {
+      const updateData: any = {
         nome: profileData.nome,
         email: profileData.email,
         cpf: profileData.cpf || '',
@@ -155,9 +168,9 @@ const Profile = () => {
         updateData.senha = profileData.senha;
       }
 
-      await updateUser(user?.id, updateData);
+      await updateUser(user!.id, updateData);
       
-      const newOriginalData = {
+      const newOriginalData: ProfileFormData = {
         ...profileData,
         senha: '',
         confirmSenha: ''
@@ -169,7 +182,7 @@ const Profile = () => {
       setShowPasswordModal(false);
       setCurrentPassword('');
       alert('Perfil atualizado com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);
       
       let errorMessage = 'Erro ao atualizar perfil. Tente novamente.';
@@ -204,12 +217,22 @@ const Profile = () => {
     }
   };
 
-  const getUserTypeLabel = (userType) => {
-    switch (userType) {
-      case 1: return 'Consumidor';
-      case 2: return 'Fornecedor';
-      case 3: return 'Administrador';
-      default: return 'Não definido';
+  const getUserTypeLabel = (userType: string | number): string => {
+    // Converte para string para padronizar a comparação
+    const type = String(userType);
+    
+    switch (type) {
+      case '1':
+      case 'Consumidor':
+        return 'Consumidor';
+      case '2':
+      case 'Fornecedor':
+        return 'Fornecedor';
+      case '3':
+      case 'Administrador':
+        return 'Administrador';
+      default:
+        return 'Não definido';
     }
   };
 
@@ -238,7 +261,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold text-white">Meu Perfil</h1>
-                    <p className="text-gray-100">{getUserTypeLabel(user?.userType)}</p>
+                    <p className="text-gray-100">{getUserTypeLabel(profileData.tipoUsuario)}</p>
                   </div>
                 </div>
                 <button
@@ -456,7 +479,7 @@ const Profile = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Conta</label>
                     <p className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
-                      {getUserTypeLabel(user?.userType)}
+                      {getUserTypeLabel(profileData.tipoUsuario)}
                     </p>
                   </div>
                 </div>
